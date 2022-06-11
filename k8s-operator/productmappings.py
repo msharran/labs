@@ -1,5 +1,3 @@
-
-from tkinter import W
 import kopf
 import logging
 
