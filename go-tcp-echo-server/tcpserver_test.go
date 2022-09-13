@@ -103,23 +103,15 @@ func Test5ConcurrentConnections(t *testing.T) {
 	f := newFixture(t)
 	f.RunTestServerInBackground()
 
-	var conns []net.Conn
-	defer func() {
-		for _, conn := range conns {
-			require.NoError(t, conn.Close())
-		}
-	}()
-
 	var wg sync.WaitGroup
 	for i := 0; i < 5; i++ {
 		wg.Add(1)
+
 		go func(i int) {
 			defer wg.Done()
+
 			conn, err := net.Dial("tcp", TestNetAddr)
 			require.NoError(t, err)
-			conns = append(conns, conn)
-
-			defer func() { require.NoError(t, conn.Close()) }()
 
 			for _, ins := range f.GetInsertPrices() {
 				_, err = conn.Write(ins)

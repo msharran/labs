@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
@@ -49,44 +50,47 @@ func (svr *TCPServer) ListenAndServe() {
 }
 
 func (svr *TCPServer) handleRequest(conn net.Conn) {
-	logrus.Info("handling connection")
+	log := logrus.WithField("request-id", uuid.NewString())
+
+	log.Infof("handling connection")
+
 	defer func() {
 		if err := conn.Close(); err != nil {
-			logrus.Error("unable to close the connection")
+			log.Error("unable to close the connection")
 		}
 	}()
 
 	r := bufio.NewReader(conn)
 	for {
-		logrus.Info("processing connection")
+		log.Info("processing connection")
 		msg := make([]byte, 9)
 		_, err := r.Read(msg)
 		if err != nil {
-			logrus.Error("error reading from connection", err)
+			log.Error("error reading from connection", err)
 			break
 		}
 
 		switch string(msg[0]) {
 		case "I":
-			svr.insertPrice(conn, msg)
+			svr.insertPrice(conn, msg, log)
 		case "Q":
-			meanPrice := svr.queryPrice(conn, msg)
-			logrus.Infof("mean price: %v", meanPrice)
+			meanPrice := svr.queryPrice(conn, msg, log)
+			log.Infof("mean price: %v", meanPrice)
 
 			data := make([]byte, 4)
 			binary.BigEndian.PutUint32(data, meanPrice)
 
 			_, err := conn.Write(data)
 			if err != nil {
-				logrus.Error("error writing to connection", err)
+				log.Error("error writing to connection", err)
 			}
 		default:
-			logrus.Errorf("undefined behavior: %s, try sending again", string(msg[0]))
+			log.Errorf("undefined behavior: %s, try sending again", string(msg[0]))
 		}
 	}
 }
 
-func (svr *TCPServer) insertPrice(conn net.Conn, msg []byte) {
+func (svr *TCPServer) insertPrice(conn net.Conn, msg []byte, log *logrus.Entry) {
 	svr.pricesMux.Lock()
 	defer svr.pricesMux.Unlock()
 
@@ -98,18 +102,18 @@ func (svr *TCPServer) insertPrice(conn net.Conn, msg []byte) {
 	price := binary.BigEndian.Uint32(msg[5:])
 	svr.prices[conn][ts] = price
 
-	logrus.Infof("inserted price. total: %d", len(svr.prices[conn]))
+	log.Infof("inserted price. total: %d", len(svr.prices[conn]))
 }
 
-func (svr *TCPServer) queryPrice(conn net.Conn, msg []byte) uint32 {
+func (svr *TCPServer) queryPrice(conn net.Conn, msg []byte, log *logrus.Entry) uint32 {
 	svr.pricesMux.Lock()
 	prices := svr.prices[conn]
 	svr.pricesMux.Unlock()
 
-	logrus.Infof("queried prices: %v", len(prices))
+	log.Infof("queried prices: %v", len(prices))
 
 	if prices == nil {
-		logrus.Info("no prices added for the connection, returning 0")
+		log.Info("no prices added for the connection, returning 0")
 		return 0
 	}
 
