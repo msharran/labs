@@ -1,1 +1,1 @@
-web: go-tcp-echo-server
+web: ./bin/go-tcp-echo-server
