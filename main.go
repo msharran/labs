@@ -1,9 +1,11 @@
 package main
 
+import "os"
+
 func main() {
 	svr := NewTCPServer(TCPServerConfig{
 		Host: "localhost",
-		Port: "8080",
+		Port: os.Getenv("PORT"),
 	})
 	svr.ListenAndServe()
 }
