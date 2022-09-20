@@ -1,3 +1,4 @@
+// +heroku goVersion go1.18.3
 module github.com/msharran/labs/go-tcp-echo-server
 
 go 1.18
