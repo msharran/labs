@@ -12,7 +12,7 @@ endif
 
 let g:vim_bootstrap_langs = "go,html,javascript,python,ruby,typescript"
 let g:vim_bootstrap_editor = "nvim"				" nvim or vim
-let g:vim_bootstrap_theme = "gruvbox"
+let g:vim_bootstrap_theme = "nord"
 let g:vim_bootstrap_frams = ""
 
 if !filereadable(vimplug_exists)
@@ -38,8 +38,6 @@ Plug 'scrooloose/nerdtree'
 Plug 'jistr/vim-nerdtree-tabs'
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-fugitive'
-Plug 'vim-airline/vim-airline'
-Plug 'vim-airline/vim-airline-themes'
 Plug 'airblade/vim-gitgutter'
 Plug 'vim-scripts/grep.vim'
 Plug 'vim-scripts/CSApprox'
@@ -49,7 +47,8 @@ Plug 'dense-analysis/ale'
 Plug 'Yggdroot/indentLine'
 Plug 'editor-bootstrap/vim-bootstrap-updater'
 Plug 'tpope/vim-rhubarb' " required by fugitive to :Gbrowse
-Plug 'morhetz/gruvbox'
+Plug 'tpope/vim-surround'
+Plug 'Yazeed1s/minimal.nvim'
 
 if isdirectory('/usr/local/opt/fzf')
   Plug '/usr/local/opt/fzf' | Plug 'junegunn/fzf.vim'
@@ -118,8 +117,17 @@ Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'easymotion/vim-easymotion'
 
 " tab manager
+Plug 'ryanoasis/vim-devicons' " Nerd tree file icons
 Plug 'kyazdani42/nvim-web-devicons'
 Plug 'romgrk/barbar.nvim'
+
+" terraform 
+Plug 'hashivim/vim-terraform'
+
+" Plug 'shaunsingh/nord.nvim'
+
+ Plug 'itchyny/lightline.vim'
+
 
 "*****************************************************************************
 "*****************************************************************************
@@ -186,9 +194,17 @@ syntax on
 set ruler
 set number
 set relativenumber
+set cursorline
 
 let no_buffers_menu=1
-colorscheme gruvbox
+colorscheme minimal
+
+" Nord theme config 
+let g:nord_contrast = v:true
+let g:nord_borders = v:false
+let g:nord_disable_background = v:false
+let g:nord_italic = v:false
+let g:nord_uniform_diff_background = v:true
 
 " Better command line completion 
 set wildmenu
@@ -248,14 +264,6 @@ nnoremap N Nzzzv
 if exists("*fugitive#statusline")
   set statusline+=%{fugitive#statusline()}
 endif
-
-" vim-airline
-let g:airline_theme = 'powerlineish'
-let g:airline#extensions#branch#enabled = 1
-let g:airline#extensions#ale#enabled = 1
-let g:airline#extensions#tabline#enabled = 1
-let g:airline#extensions#tagbar#enabled = 1
-let g:airline_skip_empty_sections = 1
 
 "*****************************************************************************
 "" Abbreviations
@@ -578,10 +586,6 @@ let g:jedi#smart_auto_mappings = 0
 :call extend(g:ale_linters, {
     \'python': ['flake8'], })
 
-" vim-airline
-let g:airline#extensions#virtualenv#enabled = 1
-
-" Syntax highlight
 let python_highlight_all = 1
 
 
@@ -649,48 +653,26 @@ endif
 "" Convenience variables
 "*****************************************************************************
 
-" vim-airline
-if !exists('g:airline_symbols')
-  let g:airline_symbols = {}
-endif
-
-if !exists('g:airline_powerline_fonts')
-  let g:airline#extensions#tabline#left_sep = ' '
-  let g:airline#extensions#tabline#left_alt_sep = '|'
-  let g:airline_left_sep          = '▶'
-  let g:airline_left_alt_sep      = '»'
-  let g:airline_right_sep         = '◀'
-  let g:airline_right_alt_sep     = '«'
-  let g:airline#extensions#branch#prefix     = '⤴' "➔, ➥, ⎇
-  let g:airline#extensions#readonly#symbol   = '⊘'
-  let g:airline#extensions#linecolumn#prefix = '¶'
-  let g:airline#extensions#paste#symbol      = 'ρ'
-  let g:airline_symbols.linenr    = '␊'
-  let g:airline_symbols.branch    = '⎇'
-  let g:airline_symbols.paste     = 'ρ'
-  let g:airline_symbols.paste     = 'Þ'
-  let g:airline_symbols.paste     = '∥'
-  let g:airline_symbols.whitespace = 'Ξ'
-else
-  let g:airline#extensions#tabline#left_sep = ''
-  let g:airline#extensions#tabline#left_alt_sep = ''
-
-  " powerline symbols
-  let g:airline_left_sep = ''
-  let g:airline_left_alt_sep = ''
-  let g:airline_right_sep = ''
-  let g:airline_right_alt_sep = ''
-  let g:airline_symbols.branch = ''
-  let g:airline_symbols.readonly = ''
-  let g:airline_symbols.linenr = ''
-endif
-
 nnoremap <silent> <Leader>= :exe "resize +10"<CR>
 nnoremap <silent> <Leader>- :exe "resize -10"<CR>
 
 nnoremap <silent> <Leader>0 :exe "vertical resize +10"<CR>
 nnoremap <silent> <Leader>9 :exe "vertical resize -10"<CR>
 
+" lightline configuration
+set laststatus=2
+set noshowmode
+
+let g:lightline = {
+      \ 'colorscheme': 'nord',
+         \ 'active': {
+              \   'left': [ [ 'mode', 'paste' ],
+              \             [ 'gitbranch', 'readonly', 'filename', 'modified' ] ]
+              \ },
+              \ 'component_function': {
+              \   'gitbranch': 'FugitiveHead'
+              \ },
+          \ }
 "*********************************************************************************
 " coc 
 " ********************************************************************************
@@ -835,8 +817,8 @@ nnoremap <silent><nowait> <space>p  :<C-u>CocListResume<CR>
 nnoremap <silent>    tt,  <Cmd>BufferPrevious<CR>
 nnoremap <silent>    tt. <Cmd>BufferNext<CR>
 " Re-order to previous/next
-nnoremap <silent>    ttl  <Cmd>BufferMovePrevious<CR>
-nnoremap <silent>    ttr <Cmd>BufferMoveNext<CR>
+nnoremap <silent>    tt>  <Cmd>BufferMovePrevious<CR>
+nnoremap <silent>    tt<  <Cmd>BufferMoveNext<CR>
 " Goto buffer in position...
 nnoremap <silent>   tt1 <Cmd>BufferGoto 1<CR>
 nnoremap <silent>  tt2 <Cmd>BufferGoto 2<CR>
@@ -852,6 +834,9 @@ nnoremap <silent>   tt0 <Cmd>BufferLast<CR>
 nnoremap <silent>    ttp <Cmd>BufferPin<CR>
 " Close buffer
 nnoremap <silent>    ttc <Cmd>BufferClose<CR>
+nnoremap <silent>    ttco <Cmd>BufferCloseAllButCurrentOrPinned<CR>
+nnoremap <silent>    ttcl <Cmd>BufferCloseBuffersLeft<CR>
+nnoremap <silent>    ttcr <Cmd>BufferCloseBuffersRight<CR>
 " Wipeout buffer
 "                          :BufferWipeout
 " Close commands
@@ -861,7 +846,7 @@ nnoremap <silent>    ttc <Cmd>BufferClose<CR>
 "                          :BufferCloseBuffersLeft
 "                          :BufferCloseBuffersRight
 " Magic buffer-picking mode
-nnoremap <silent> <C-p>    <Cmd>BufferPick<CR>
+nnoremap <silent> ttp    <Cmd>BufferPick<CR>
 " Sort automatically by...
 nnoremap <silent> <Space>bb <Cmd>BufferOrderByBufferNumber<CR>
 nnoremap <silent> <Space>bd <Cmd>BufferOrderByDirectory<CR>
@@ -893,8 +878,8 @@ let bufferline.closable = v:true
 let bufferline.clickable = v:true
 
 " Excludes buffers from the tabline
-let bufferline.exclude_ft = ['javascript']
-let bufferline.exclude_name = ['package.json']
+let bufferline.exclude_ft = ['']
+let bufferline.exclude_name = ['']
 
 " Enable/disable icons
 " if set to 'buffer_number', will show buffer number in the tabline
@@ -940,3 +925,4 @@ let bufferline.letters =
 " Sets the name of unnamed buffers. By default format is "[Buffer X]"
 " where X is the buffer number. But only a static string is accepted here.
 let bufferline.no_name_title = v:null
+
