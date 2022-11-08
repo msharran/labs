@@ -52,7 +52,6 @@ fn main() -> Result<(), anyhow::Error> {
             .with_context(|| format!("unable to read file from {:?}", args.file_path))?;
     }
 
-
     let mut ptn = args.pattern.to_string();
     if args.case_insensitive {
         ptn = args.pattern.to_lowercase();
