@@ -1,51 +1,20 @@
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 alias k='kubectl'
-alias kd='open http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/'
 alias awsid='aws sts get-caller-identity'
 
 alias flushdns='sudo killall -HUP mDNSResponder'
-alias cloudBeaver='docker run --name cloudbeaver --rm -ti -p 8080:8978 -v /var/cloudbeaver/workspace:/opt/cloudbeaver/workspace dbeaver/cloudbeaver:latest'
-alias dc='docker compose'
-alias d='docker'
-alias tf='terraform'
-alias be='bundle exec'
 alias kctx="kubectx"
 alias kns="kubens"
-alias fwss="fw-secrets-util"
-alias vim="lvim"
 
 
 # Path to your oh-my-zsh installation.
-export ZSH="/Users/shmurali/.oh-my-zsh"
+export ZSH=$HOME/.oh-my-zsh
 export GOPATH=$HOME/go
 export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 export GO111MODULE=on
 
-export PATH=$PATH:/Users/shmurali/usr/local/bin
-
-tweb() {
-    open "https://$1.freshworkscorp.com"
-}
-
-tssh() {
-    ssh-add -q ~/.ssh/teleport-super-admin
-    ssh -A ec2-user@$1.freshworkscorp.com
-}
-
-tauth() {
-    ssh-add -q ~/.ssh/teleport-super-admin
-    ssh -o StrictHostKeyChecking=no -J ec2-user@$1.freshworkscorp.com ec2-user@auth.$1.freshworkscorp.com
-}
-
-tlogin() {
-    tsh --skip-version-check login --proxy=$1.freshworkscorp.com:443 --auth freshworks $2 
-}
-
-tshexit(){
-    tsh logout
-    rm -rf ~/.tsh
-}
+export PATH=$PATH:$HOME/usr/local/bin
 
 awslogin() {
     set -x
@@ -151,7 +120,7 @@ source $ZSH/oh-my-zsh.sh
 
 # Preferred editor for local and remote sessions
 # if [[ -n $SSH_CONNECTION ]]; then
-export EDITOR='lvim'
+export EDITOR='vim'
 # else
 #   export EDITOR='mvim'
 # fi
@@ -173,24 +142,8 @@ export PATH=$PATH:$HOME/bin
 
 complete -C '/usr/local/bin/aws_completer' awslocal
 
-. "$HOME/.cargo/env"
-
-# The next line updates PATH for the Google Cloud SDK.
-if [ -f '/Users/shmurali/Desktop/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/shmurali/Desktop/google-cloud-sdk/path.zsh.inc'; fi
-
-# The next line enables shell command completion for gcloud.
-if [ -f '/Users/shmurali/Desktop/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/shmurali/Desktop/google-cloud-sdk/completion.zsh.inc'; fi
-
-eval "$(rbenv init - zsh)"
-
 # k8s prompt. Refer: https://github.com/superbrothers/zsh-kubectl-prompt
 RPROMPT='%{$fg[green]%}($ZSH_KUBECTL_PROMPT)%{$reset_color%}'
-
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-export PATH=$PATH:$HOME/.emacs.d/bin
 
 # kubectl-krew
 export PATH="${PATH}:${HOME}/.krew/bin"
