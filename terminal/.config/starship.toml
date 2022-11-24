@@ -45,7 +45,8 @@ Enterprise_Naming_Scheme-voidstars = 'void**'
 
 [kubernetes]
 style = "bg:#06969A"
-format = '[ ﴱ  $context \($namespace\) ]($style)'
+format = '[ ﴱ  $cluster \($namespace\) ]($style)'
+# format = '[ ﴱ  $context \($namespace\) ]($style)' # Context will be displayed
 disabled = false
 [kubernetes.context_aliases]
 "^kind.*$" = "kind"
