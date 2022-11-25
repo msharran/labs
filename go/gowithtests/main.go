@@ -16,6 +16,10 @@ const (
 
 var ErrReqTimedOut = fmt.Errorf("request timed out")
 
+func main() {
+	fmt.Println(Hello("", ""))
+}
+
 // Hello is a function that greets the [name]
 // in the provided [language].
 // If the language is not supported/empty, it will
@@ -26,10 +30,6 @@ func Hello(name, language string) string {
 	}
 
 	return fmt.Sprintf("%s%s", translatedPrefix(language), name)
-}
-
-func Greet(w io.Writer, name string) {
-	fmt.Fprintln(w, fmt.Sprintf("%s%s", HelloPrefixEnglish, name))
 }
 
 func RacePing(a, b string) (string, error) {
@@ -56,6 +56,10 @@ func ping(url string) (res chan struct{}) {
 	return
 }
 
+func Greet(w io.Writer, name string) {
+	fmt.Fprintln(w, fmt.Sprintf("%s%s", HelloPrefixEnglish, name))
+}
+
 func translatedPrefix(language string) (prefix string) {
 	switch language {
 	case LanguageFrench:
@@ -64,8 +68,4 @@ func translatedPrefix(language string) (prefix string) {
 		prefix = HelloPrefixEnglish
 	}
 	return
-}
-
-func main() {
-	fmt.Println(Hello("", ""))
 }
