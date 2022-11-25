@@ -70,12 +70,16 @@ func (s *delayedServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(s.delay)
 }
 
+func newDelayedServer(delay time.Duration) *delayedServer {
+	return &delayedServer{delay: delay}
+}
+
 func TestPingRace(t *testing.T) {
 	t.Run("get fastest site", func(t *testing.T) {
-		slowServer := httptest.NewServer(&delayedServer{delay: 10 * time.Millisecond})
+		slowServer := httptest.NewServer(newDelayedServer(10 * time.Millisecond))
 		defer slowServer.Close()
 
-		fastServer := httptest.NewServer(&delayedServer{delay: 5 * time.Millisecond})
+		fastServer := httptest.NewServer(newDelayedServer(5 * time.Millisecond))
 		defer fastServer.Close()
 
 		got, err := RacePing(slowServer.URL, fastServer.URL)
@@ -85,10 +89,10 @@ func TestPingRace(t *testing.T) {
 	})
 
 	t.Run("fail if both requests timedout", func(t *testing.T) {
-		slowServer := httptest.NewServer(&delayedServer{delay: 10 * time.Millisecond})
+		slowServer := httptest.NewServer(newDelayedServer(10 * time.Millisecond))
 		defer slowServer.Close()
 
-		fastServer := httptest.NewServer(&delayedServer{delay: 5 * time.Millisecond})
+		fastServer := httptest.NewServer(newDelayedServer(5 * time.Millisecond))
 		defer fastServer.Close()
 
 		_, err := TimedRacePing(slowServer.URL, fastServer.URL, 2*time.Millisecond)
