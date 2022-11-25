@@ -9,6 +9,10 @@ const (
 	HelloPrefixFrench  = "Bonjour, "
 )
 
+// Hello is a function that greets the [name]
+// in the provided [language].
+// If the language is not supported/empty, it will
+// greet in English
 func Hello(name, language string) string {
 	if name == "" {
 		name = "World"
