@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
 
 func TestHello(t *testing.T) {
 	t.Run("greet name when argument is passed", func(t *testing.T) {
@@ -46,9 +50,19 @@ func TestHello(t *testing.T) {
 	})
 }
 
+func TestGreet(t *testing.T) {
+	w := bytes.Buffer{}
+	Greet(&w, "Sharran")
+	want := "Hello, Sharran"
+	got := strings.TrimSpace(w.String())
+
+	requireString(t, want, got)
+}
+
 func requireString(t testing.TB, want, got string) {
 	t.Helper()
 	if got != want {
-		t.Errorf("want '%s' but got '%s'", want, got)
+		t.Errorf("len(want): %d, len(got): %d", len(want), len(got))
+		t.Errorf("want: %s\ngot: %s", want, got)
 	}
 }

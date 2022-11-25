@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 const (
 	LanguageFrench = "French"
@@ -19,6 +22,10 @@ func Hello(name, language string) string {
 	}
 
 	return fmt.Sprintf("%s%s", translatedPrefix(language), name)
+}
+
+func Greet(w io.Writer, name string) {
+	fmt.Fprintln(w, fmt.Sprintf("%s%s", HelloPrefixEnglish, name))
 }
 
 func translatedPrefix(language string) (prefix string) {
