@@ -6,14 +6,7 @@ $directory\
 [](fg:#DA627D bg:#FCA17D)\
 $git_branch\
 $git_status\
-[](fg:#FCA17D bg:#86BBD8)\
-$c\
-$golang\
-$python\
-$nodejs\
-$rust\
-$ruby\
-[](fg:#86BBD8 bg:#06969A)\
+[](fg:#FCA17D bg:#06969A)\
 $kubernetes\
 [](fg:#06969A bg:#33658A)\
 $aws\
@@ -48,10 +41,10 @@ style = "bg:#06969A"
 format = '[ ﴱ  $cluster \($namespace\) ]($style)'
 # format = '[ ﴱ  $context \($namespace\) ]($style)' # Context will be displayed
 disabled = false
-[kubernetes.context_aliases]
-"^kind.*$" = "kind"
-"gke_.*_(?P<var_cluster>[\\w-]+)" = "gke-$var_cluster"
-"fw-secrets-service-(?P<var_cluster>[\\w-]+)" = "$var_cluster"
+# [kubernetes.context_aliases]
+# ".*kind.*" = "kind"
+# "gke_.*_(?P<var_cluster>[\\w-]+)" = "gke-$var_cluster"
+# "fw-secrets-service-(?P<var_cluster>[\\w-]+)" = "$var_cluster"
 
 # Here is how you can shorten some long paths by text replacement
 # similar to mapped_locations in Oh My Posh:
@@ -78,7 +71,7 @@ format = '[ $symbol $branch ]($style)'
 
 [git_status]
 style = "bg:#FCA17D"
-format = '[$all_status$ahead_behind ]($style)'
+format = '[$all_status$ahead_behind]($style)'
 
 [golang]
 symbol = " "
