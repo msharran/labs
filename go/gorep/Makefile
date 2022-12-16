@@ -1,3 +1,5 @@
+SHELL = /bin/bash
+
 # find go files and add them as dependencies
 GOFILES := $(shell find . -iname "*.go")
 
@@ -9,14 +11,16 @@ WHAT ?= ./...
 test: fmt vet
 	go test $(ARGS) $(WHAT)
 
-fmt: 
+fmt:
 	go fmt ./...
 
-vet:
+vet: 
 	go vet ./...
 
 print: $(GOFILES)
-	@echo $?
+	echo $^ # prints all dependencies
+	echo $? # prints changed dependencies since last run
+	echo $@ # prints the target name
 
 install:
 	go install
