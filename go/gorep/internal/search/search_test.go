@@ -16,19 +16,19 @@ leo eros lacinia massa, eu viverra tellus augue
 func TestSearch(t *testing.T) {
 	testCases := []struct {
 		name string
-		args SearchArgs
+		args ExecArgs
 		want string
 	}{
 		{
 			"simple search",
-			SearchArgs{
+			ExecArgs{
 				Pattern: "quis",
 			},
 			"Etiam consectetur, nibh quis placerat posuere,\n",
 		},
 		{
 			"search with line numbers",
-			SearchArgs{
+			ExecArgs{
 				Pattern:         "Lorem",
 				ShowLineNumbers: true,
 			},
@@ -36,7 +36,7 @@ func TestSearch(t *testing.T) {
 		},
 		{
 			"search case insensitive",
-			SearchArgs{
+			ExecArgs{
 				Pattern:         "lorem",
 				CaseInsensitive: true,
 			},
@@ -44,7 +44,7 @@ func TestSearch(t *testing.T) {
 		},
 		{
 			"search line count",
-			SearchArgs{
+			ExecArgs{
 				Pattern:       "et",
 				ShowLineCount: true,
 			},
@@ -57,7 +57,7 @@ func TestSearch(t *testing.T) {
 			t.Parallel()
 			w := &bytes.Buffer{}
 
-			err := Search(w, strings.NewReader(CONTENT), tc.args)
+			err := Exec(w, strings.NewReader(CONTENT), tc.args)
 
 			if err != nil {
 				t.Error(err)

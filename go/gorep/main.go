@@ -1,12 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"io"
 	"os"
-	"strings"
+
+	"github.com/msharran/labs/go/gorep/internal/search"
 )
 
 var (
@@ -34,43 +34,16 @@ func main() {
 		}
 		reader = f
 	}
-	pattern := flag.Arg(0)
-	if *caseInsensitive {
-		pattern = strings.ToLower(pattern)
-	}
 
-	scanner := bufio.NewScanner(reader)
+	err := search.Exec(os.Stdout, reader, search.ExecArgs{
+		Pattern:         flag.Arg(0),
+		CaseInsensitive: *caseInsensitive,
+		ShowLineCount:   *showLineCount,
+		ShowLineNumbers: *showLineNumbers,
+	})
 
-	var lineCount int
-	lineNumber := 0
-
-	for scanner.Scan() {
-		lineNumber++
-		line := scanner.Text()
-		if *caseInsensitive {
-			line = strings.ToLower(line)
-		}
-
-		if strings.Contains(line, pattern) {
-			if *showLineCount {
-				lineCount++
-				continue
-			}
-
-			if *showLineNumbers {
-				fmt.Println(lineNumber, line)
-			} else {
-				fmt.Println(line)
-			}
-		}
-	}
-
-	if *showLineCount {
-		fmt.Println(lineCount)
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error while scanning file", err)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Search error", err)
 		os.Exit(1)
 	}
 }

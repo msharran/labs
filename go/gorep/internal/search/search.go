@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-type SearchArgs struct {
+type ExecArgs struct {
 	Pattern         string
 	CaseInsensitive bool
 	ShowLineCount   bool
 	ShowLineNumbers bool
 }
 
-func Search(w io.Writer, r io.Reader, args SearchArgs) error {
+func Exec(w io.Writer, r io.Reader, args ExecArgs) error {
 	pattern := args.Pattern
 	scanner := bufio.NewScanner(r)
 
