@@ -10,6 +10,7 @@ func main() {
 	app := fiber.New()
 
 	app.Get("/", func(c *fiber.Ctx) error {
+		log.Println(c.Request().String())
 		return c.SendString("Hello, World!")
 	})
 
