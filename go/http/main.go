@@ -1,18 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"log"
-
-	"github.com/gofiber/fiber/v2"
+	"net/http"
 )
 
 func main() {
-	app := fiber.New()
-
-	app.Get("/", func(c *fiber.Ctx) error {
-		log.Println(c.Request().String())
-		return c.SendString("Hello, World!")
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("handling request", r.Host)
+		fmt.Fprintln(w, "Hello, World")
 	})
 
-	log.Fatal(app.Listen(":8080"))
+	log.Printf("started the server at port %d\n", 8080)
+	err := http.ListenAndServeTLS(":8080", "example.com+2.pem", "example.com+2-key.pem", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
