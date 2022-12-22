@@ -58,7 +58,7 @@ func proxy(upstreamConn net.Conn) {
 		log.Info("downstream connection closed")
 	}()
 
-	slog.Info("setting deadline for upstream and downstream connections", "deadline", "5s")
+	// setting up conn deadlines
 	upstreamConn.SetDeadline(time.Now().Add(5 * time.Second))
 	downstreamConn.SetDeadline(time.Now().Add(5 * time.Second))
 

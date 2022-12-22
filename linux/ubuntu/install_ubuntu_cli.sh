@@ -16,12 +16,15 @@ fi
 # Create configuration file if it doesn't exist
 if [ ! -f "$RC_FILE" ]; then
   echo "$RC_FILE does not exist. creating it"
-  touch $RC_FILE
+  if [[ $DRYRUN != 1 ]]; then
+    touch $RC_FILE
+  fi
 fi
 
-echo "Adding ubuntu funtion to $RC_FILE"
 
-cat <<EOF >> $RC_FILE
+if [[ $DRYRUN != 1 ]]; then
+
+  cat <<EOF >> $RC_FILE
 
 ### UBUNTU CLI CONFIGURATION
 
@@ -45,13 +48,14 @@ ubuntu() {
 }
 
 EOF
+fi
 
-echo "Installed ubuntu CLI!"
-echo "To use it, open new terminal or run \"source $RC_FILE\"."
-printf "%s\n" \
-  "Command Usage:" \
-  "  ubuntu start" \
-  "  ubuntu stop" \
-  "  ubuntu exec bash" \
-  "  ubuntu exec ls -l"
+echo -e "\xE2\x9C\x85  Added ubuntu funtion to $RC_FILE"
+echo -e "\xE2\x9D\x97  To use it, open new terminal or run \"source $RC_FILE\"."
+echo -e "\xF0\x9F\x93\x9C  Command Usage:"
+printf "\t%s\n" \
+  "- ubuntu start" \
+  "- ubuntu stop" \
+  "- ubuntu exec bash" \
+  "- ubuntu exec ls -l"
 
