@@ -68,9 +68,10 @@ func proxy(upstreamConn net.Conn) {
 	slog.Info("sending traffic to downstreamAddr", "downstreamAddr", downstreamConn.RemoteAddr().String())
 
 	var wg sync.WaitGroup
-	// send traffic from upstream to downstream and vice-versa
+	wg.Add(2)
 
-	wg.Add(1)
+	// send traffic from upstreamConn to downstreamConn
+
 	go func() {
 		defer wg.Done()
 		_, err := io.Copy(downstreamConn, upstreamConn)
@@ -80,7 +81,7 @@ func proxy(upstreamConn net.Conn) {
 		}
 	}()
 
-	wg.Add(1)
+	// send traffic from downstreamConn to upstreamConn
 	go func() {
 		defer wg.Done()
 		_, err = io.Copy(upstreamConn, downstreamConn)
