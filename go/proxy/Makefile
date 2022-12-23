@@ -17,10 +17,11 @@ httpserver:
 
 
 .PHONY: envoy
-ENVOY := envoy -c ./envoy-demo.yaml --config-yaml "$$(cat envoy-override.yaml)" 
 envoy:
 ifeq ($(VALIDATE), 1)
-	$(ENVOY) --mode validate $(ARGS) 
+	envoy -c ./envoy-demo.yaml --config-yaml "$$(cat envoy-override.yaml)" --mode validate $(ARGS)
+else ifeq ($(DEMO), 1)
+	envoy -c ./envoy-demo.yaml --config-yaml "$$(cat envoy-override.yaml)" $(ARGS) 
 else
-	$(ENVOY) $(ARGS) 
+	envoy -c ./envoy.yaml --config-yaml "$$(cat envoy-override.yaml)" $(ARGS) 
 endif
