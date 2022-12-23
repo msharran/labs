@@ -8,7 +8,7 @@ bin/proxy: $(GOFILES)
 
 .PHONY: proxy
 proxy: bin/proxy
-	./bin/proxy -downstream_addr localhost:8080
+	./bin/proxy -serverAddr=localhost:8080
 
 
 .PHONY: server

@@ -11,12 +11,15 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-var downstreamAddr string
+var serverAddr string
+var timeout time.Duration
 
-const UPSTREAM_ADDR = ":9090"
+const proxyAddr = ":9090"
 
 func init() {
-	flag.StringVar(&downstreamAddr, "downstream_addr", "localhost:9090", "Downstream address to proxy. Eg, `google.com:443`")
+	flag.StringVar(&serverAddr, "serverAddr", "localhost:9090", "Downstream address to proxy. Eg, `google.com:443`")
+	t := flag.Int("timeout", 5, "Connection timeout in seconds. Default: 5")
+	timeout = time.Duration(*t)
 }
 
 func main() {
@@ -25,10 +28,10 @@ func main() {
 	log := slog.New(slog.NewTextHandler(os.Stdout))
 	slog.SetDefault(log)
 
-	l, err := net.Listen("tcp", UPSTREAM_ADDR)
+	l, err := net.Listen("tcp", proxyAddr)
 	check(err, "failed to setup TCP listener")
 
-	slog.Info("started proxy", "Addr", UPSTREAM_ADDR)
+	slog.Info("started proxy", "Addr", proxyAddr)
 
 	for {
 		conn, err := l.Accept()
@@ -48,7 +51,7 @@ func proxy(upstreamConn net.Conn) {
 
 	log.Info("connected to client")
 
-	downstreamConn, err := net.Dial("tcp", downstreamAddr)
+	downstreamConn, err := net.Dial("tcp", serverAddr)
 	if err != nil {
 		slog.Error("error connecting to downstreamServer", err)
 		return
@@ -59,8 +62,8 @@ func proxy(upstreamConn net.Conn) {
 	}()
 
 	// setting up conn deadlines
-	upstreamConn.SetDeadline(time.Now().Add(5 * time.Second))
-	downstreamConn.SetDeadline(time.Now().Add(5 * time.Second))
+	upstreamConn.SetDeadline(time.Now().Add(timeout))
+	downstreamConn.SetDeadline(time.Now().Add(timeout))
 
 	slog.Info("sending traffic to downstreamAddr", "downstreamAddr", downstreamConn.RemoteAddr().String())
 	// send traffic from upstream to downstream and vice-versa
