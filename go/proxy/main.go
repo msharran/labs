@@ -36,11 +36,11 @@ func main() {
 	for {
 		conn, err := l.Accept()
 		check(err, "failed to accept connection")
-		go proxy(conn)
+		go passThroughProxy(conn)
 	}
 }
 
-func proxy(upstreamConn net.Conn) {
+func passThroughProxy(upstreamConn net.Conn) {
 	id := ulid.Make()
 	log := slog.With("clientID", id)
 
