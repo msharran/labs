@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -19,7 +20,7 @@ const proxyAddr = ":9090"
 func init() {
 	flag.StringVar(&serverAddr, "serverAddr", "localhost:9090", "Downstream address to proxy. Eg, `google.com:443`")
 	t := flag.Int("timeout", 5, "Connection timeout in seconds. Default: 5")
-	timeout = time.Duration(*t)
+	timeout = time.Duration(*t) * time.Second
 }
 
 func main() {
@@ -48,7 +49,6 @@ func passThroughProxy(upstreamConn net.Conn) {
 		upstreamConn.Close()
 		log.Info("upstream connection closed")
 	}()
-
 	log.Info("connected to client")
 
 	downstreamConn, err := net.Dial("tcp", serverAddr)
@@ -66,21 +66,31 @@ func passThroughProxy(upstreamConn net.Conn) {
 	downstreamConn.SetDeadline(time.Now().Add(timeout))
 
 	slog.Info("sending traffic to downstreamAddr", "downstreamAddr", downstreamConn.RemoteAddr().String())
+
+	var wg sync.WaitGroup
 	// send traffic from upstream to downstream and vice-versa
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		_, err := io.Copy(downstreamConn, upstreamConn)
 		if err != nil {
 			slog.Error("error copying upstream to downstream", err)
 			return
 		}
 	}()
-	_, err = io.Copy(upstreamConn, downstreamConn)
-	if err != nil {
-		slog.Error("error copying downstream to upstream", err)
-		return
-	}
 
-	slog.Info("responding back to upstreamAddr", "upstreamAddr", upstreamConn.RemoteAddr().String())
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, err = io.Copy(upstreamConn, downstreamConn)
+		if err != nil {
+			slog.Error("error copying downstream to upstream", err)
+			return
+		}
+	}()
+
+	wg.Wait()
 }
 
 func echoBack(conn net.Conn) {
