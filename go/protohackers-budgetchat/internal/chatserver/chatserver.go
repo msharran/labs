@@ -12,7 +12,7 @@ import (
 
 // errors
 var (
-	ErrNameNotProvided = fmt.Errorf("name is not provided; members will be joined only if name is provided")
+	ErrNameNotProvided = fmt.Errorf("NameNotProvided")
 )
 
 type ServerArgs struct {
@@ -72,92 +72,157 @@ func (c *chatServer) enterRoom(conn net.Conn) {
 
 func (c *chatServer) reconcileMember(conn net.Conn) bool {
 	c.mu.Lock()
-	defer c.mu.Unlock()
+	mem, ok := c.room[conn]
+	c.mu.Unlock()
 
-	mem := c.room[conn]
-
-	// if member has not joined , ask name
-	if mem == nil {
-		_, err := conn.Write([]byte("What is your name?"))
+	switch {
+	case !ok: // if member not in room , ask name
+		_, err := conn.Write([]byte("* What is your name?"))
 		if err != nil {
 			c.log.Error("failed to ask member name", err)
 			return false
 		}
 
-		// add the member to  without joining them (joined=false)
+		// add the member to room without joining them (joined=false)
+		c.mu.Lock()
 		c.room[conn] = &member{}
+		c.mu.Unlock()
 
 		return true
-	}
 
-	nameBuf := [16]byte{}
-	nameN, err := conn.Read(nameBuf[:])
-	if err != nil {
-		c.log.Error("failed to get name from member", err)
-		return false
-	}
-
-	name := string(nameBuf[:nameN])
-	log := c.log.With("member", name)
-
-	// kick out member if name is not provided
-	if name == "\n" {
-		log.Error("", ErrNameNotProvided)
-
-		_, err := conn.Write([]byte(ErrNameNotProvided.Error()))
+	case !mem.joined: // validate and add new member to the room
+		// get name from member
+		nameBuf := [16]byte{}
+		nameN, err := conn.Read(nameBuf[:])
 		if err != nil {
-			log.Error("failed to write back to connection", nil)
+			c.log.Error("failed to get name from member", err)
 			return false
 		}
-		return false
-	}
 
-	// add new member to the room
-	if !mem.joined {
-		mem.name = name
+		name := string(nameBuf[:nameN])
+		name = strings.TrimSuffix(name, "\n")
+		log := c.log.With("member", name)
 
-		// get other joined members
-		var mm []string
-		for _, m := range c.room {
-			if m.name != name {
-				mm = append(mm, m.name)
+		log.Info("adding new member to the room")
+
+		// kick out member if name is not provided
+		if name == "" {
+			c.mu.Lock()
+			delete(c.room, conn)
+			c.mu.Unlock()
+			log.Error("name not provided, kicked out member", ErrNameNotProvided)
+
+			_, err := conn.Write([]byte("name is not provided, please enter a name when you join!\n"))
+			if err != nil {
+				log.Error("failed to write back to connection", nil)
+				return false
 			}
+			return false
 		}
 
-		// show members list to new member
-		msg := fmt.Sprintf("room contains: %s", strings.Join(mm, ","))
+		// now add the member to the room
+		mem.name = name
+		mem.joined = true
+
+		// tell others new member has joined
+		var others []string
+		c.mu.Lock()
+		for mc, m := range c.room {
+			if mc != conn {
+				others = append(others, m.name)
+
+				msg := fmt.Sprintf("* %s joined the room\n", name)
+				_, err = mc.Write([]byte(msg))
+				if err != nil {
+					log.Error("failed to write back to connection", nil)
+				}
+			}
+		}
+		c.mu.Unlock()
+
+		// tell the member who are present in the room
+		msg := fmt.Sprintf("room contains: %s\n", strings.Join(others, ","))
 		_, err = conn.Write([]byte(msg))
 		if err != nil {
 			log.Error("failed to write back to connection", nil)
+		}
+
+		return true
+
+	default:
+		name := mem.name
+		log := c.log.With("member", name)
+
+		// read message from member
+		buf := [1000]byte{}
+		n, err := conn.Read(buf[:])
+		if err != nil {
+			log.Error("error reading message from connection", nil)
 			return false
 		}
-		mem.joined = true
+
+		// send to other members in the room
+		c.mu.Lock()
+		for mConn, m := range c.room {
+			if mConn != conn {
+				log.Info("sending message", "to", m.name)
+				defer log.Info("sent message", "to", m.name)
+
+				_, err := mConn.Write([]byte(fmt.Sprintf("[%s] %s", name, string(buf[:n]))))
+				if err != nil {
+					c.log.Error("error sending message", nil, "from", name, "to", m.name)
+				}
+			}
+		}
+		c.mu.Unlock()
+
 		return true
 	}
-
-	return true
 }
 
 func (c *chatServer) exitRoom(conn net.Conn) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	mem := c.room[conn]
+
+	mem, ok := c.room[conn]
+	name := "unknown"
+	if ok {
+		name = mem.name
+	}
 
 	err := conn.Close()
 	if err != nil {
-		c.log.Error("error while closing the ", err, "member", mem.name)
+		c.log.Error("error while closing the ", err, "member", name)
 		return
 	}
 
-	c.log.Info("member left ", "member", mem.name)
+	c.log.Info("member left ", "member", name)
 	delete(c.room, conn)
 
-	// inform all members
-	msg := fmt.Sprintf("%s left the ", mem.name)
+	// inform all members when a member leaves
+	if ok {
+		msg := fmt.Sprintf("* %s left the room\n", name)
+		for mConn, m := range c.room {
+			_, err := mConn.Write([]byte(msg))
+			if err != nil { // only print error in server if writing fails. it can be soft failure
+				c.log.Error("error while writing 'member left' message", err, "failed_member", m.name)
+			}
+		}
+	}
+}
+
+func (c *chatServer) sendMessage(conn net.Conn, message string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	name := c.room[conn].name
+
 	for mConn, m := range c.room {
-		_, err := mConn.Write([]byte(msg))
-		if err != nil { // only print error in server if writing fails. it can be soft failure
-			c.log.Error("error while writing 'member left' message", err, "failed_member", m.name)
+		if mConn != conn {
+			_, err := mConn.Write([]byte(fmt.Sprintf("[%s] %s", strings.TrimSuffix(name, "\n"), message)))
+			if err != nil {
+				c.log.Error("error sending message", nil, "from", name, "to", m.name)
+			}
 		}
 	}
 }

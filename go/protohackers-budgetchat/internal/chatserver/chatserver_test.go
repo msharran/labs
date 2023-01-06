@@ -30,5 +30,5 @@ func TestChatting(t *testing.T) {
 	})
 	mockConn.On("Write", []byte("foo\n")).Return(4, nil).Once().NotBefore(readCall)
 
-	c.handleChat(mockConn)
+	c.enterRoom(mockConn)
 }

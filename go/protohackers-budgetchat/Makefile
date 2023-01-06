@@ -4,7 +4,10 @@ build:
 	go build -o bin/budgetchat
 
 run:
-	go run ./...
+	go run -race ./...
+
+join:
+	nc localhost 10000
 
 generate:
 	go generate ./...
