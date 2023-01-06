@@ -14,7 +14,7 @@ var timeout time.Duration
 const serverAddr = ":10000"
 
 func init() {
-	t := flag.Int("timeout", 5, "Connection timeout in seconds. Default: 5")
+	t := flag.Int("timeout", 60, "Connection timeout in seconds. Default: 60")
 	timeout = time.Duration(*t) * time.Second
 }
 
@@ -30,5 +30,6 @@ func main() {
 
 	if err := svr.Listen(serverAddr); err != nil {
 		log.Error("server failed", err)
+		os.Exit(1)
 	}
 }
