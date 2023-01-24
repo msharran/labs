@@ -11,8 +11,12 @@ an executable
 -- general
 lvim.log.level = "warn"
 lvim.format_on_save.enabled = false
-lvim.colorscheme = "lunar"
 vim.opt.relativenumber = true
+vim.opt.autoread = true
+
+-- Themes
+lvim.colorscheme = "nord"
+
 -- to disable icons and use a minimalist setup, uncomment the following
 -- lvim.use_icons = false
 
@@ -32,10 +36,13 @@ lvim.keys.normal_mode["<leader>sw"] = ":lua require('spectre').open_visual({sele
 -- vim-go key mappings
 lvim.keys.normal_mode["<leader>gt"] = ":GoTest -v -race<CR>"
 lvim.keys.normal_mode["<leader>gtf"] = ":GoTestFunc -v -race<CR>"
-lvim.keys.normal_mode["<leader>ga"] = ":GoAlternate<CR>"
+lvim.keys.normal_mode["<leader>gtc"] = ":GoCoverageToggle<CR>"
+lvim.keys.normal_mode["<leader>ga"] = ":GoAlternate<cr>"
+lvim.keys.normal_mode["<leader>gf"] = ":GoRename<CR>"
 
--- lvim.keys.normal_mode["<S-l>"] = ":BufferLineCycleNext<CR>"
--- lvim.keys.normal_mode["<S-h>"] = ":BufferLineCyclePrev<CR>"
+lvim.keys.normal_mode["<S-l>"] = ":BufferLineCycleNext<CR>"
+lvim.keys.normal_mode["<S-h>"] = ":BufferLineCyclePrev<CR>"
+
 -- unmap a default keymapping
 -- vim.keymap.del("n", "<C-Up>")
 -- override a default keymapping
@@ -198,6 +205,17 @@ lvim.plugins = {
       vim.api.nvim_set_keymap("n", "S", ":HopWord<cr>", { silent = true })
     end,
   },
+  {"arcticicestudio/nord-vim"},
+  {
+      "kylechui/nvim-surround",
+      tag = "*", -- Use for stability; omit to use `main` branch for the latest features
+      config = function()
+          require("nvim-surround").setup({
+              -- Configuration here, or leave empty to use defaults
+          })
+      end
+  },
+  { 'sindrets/diffview.nvim', requires = 'nvim-lua/plenary.nvim' }
 }
 
 -- Autocommands (https://neovim.io/doc/user/autocmd.html)
