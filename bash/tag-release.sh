@@ -206,6 +206,7 @@ if [ -z "$NEEDSTAG" ]; then
             conditional_echo "Release Notes:"
             conditional_echo "$RELEASENOTES"
         fi
+        echo $NEWTAG > VERSION
     else
         conditional_echo "-- ERROR: TAG $NEWTAG already exists."
         exit 1
