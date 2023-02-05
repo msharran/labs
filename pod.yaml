@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: go-http-server
+  name: go-http-server
+spec:
+  containers:
+  - image: go-http-server
+    imagePullPolicy: IfNotPresent
+    name: go-http-server
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
