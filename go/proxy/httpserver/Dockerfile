@@ -1,15 +1,7 @@
-FROM golang:1.19-alpine
+FROM credsre/generic-debian10-kms:no-root
 
-WORKDIR /app
-
-COPY go.mod ./
-COPY go.sum ./
-RUN go mod download
-
-COPY ./cmd/http/main.go ./
-
-RUN go build -o /http-server
+COPY http /bin
 
 EXPOSE 8080
 
-CMD ["/http-server"]
+CMD ["/bin/http"]
