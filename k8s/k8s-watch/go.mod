@@ -1,4 +1,4 @@
-module fwss-watch
+module watch
 
 go 1.18
 
