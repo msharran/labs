@@ -19,11 +19,11 @@ spec:
     basePlugins:
     - name: kubernetes 
       version: "1.29.2"
-    - name: kubernetes-client-api # n
+    - name: kubernetes-client-api # resolved
       version: "5.4.1"
-    - name: caffeine-api #n
+    - name: caffeine-api # resolved
       version: "2.9.1-23.v51c4e2c879c8"
-    - name: kubernetes-credentials # n
+    - name: kubernetes-credentials # resolved
       version: "0.8.0"
     - name: workflow-job 
       version: "2.40" 
@@ -254,11 +254,11 @@ spec:
           timeoutSeconds: 1
         resources:
           limits:
-            cpu: "1024m"
-            memory: 2Gi
+            cpu: "800m"
+            memory: 1.5Gi
           requests:
             cpu: "500m" 
-            memory: 2Gi
+            memory: 1Gi
   seedJobs:
     - id: jenkins-operator
       targets: "cicd/jobs/*.jenkins"
