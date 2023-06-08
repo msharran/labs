@@ -3,7 +3,7 @@ pipelineJob('sharran-job') {
   cpsScm {
       lightweight()
       scm {
-        git('https://github.com/msharran/labs.git')
+        git('https://github.com/msharran/labs.git', "main")
         // gitSCM {
         //   userRemoteConfigs {
         //     userRemoteConfig {
