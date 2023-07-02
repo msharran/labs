@@ -7,6 +7,7 @@ spec:
   configurationAsCode:
     configurations: 
       - name: user-configuration
+      - name: credentials
     secret:
       name: ""
   groovyScripts:

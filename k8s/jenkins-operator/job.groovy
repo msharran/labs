@@ -3,22 +3,7 @@ pipelineJob('sharran-job') {
   cpsScm {
       lightweight()
       scm {
-        git('https://github.com/msharran/labs.git', "main",{node -> node / 'extensions' << '' })
-        // gitSCM {
-        //   userRemoteConfigs {
-        //     userRemoteConfig {
-        //       url("")
-        //       name("labs")
-        //       refspec("https://github.com/msharran/labs.git")
-        //       credentialsIdj("https://github.com/msharran/labs.git")
-        //     }
-        //   }
-        //   branches {
-        //     branchSpec {
-        //       name("main")
-        //     }
-        //   }
-        // }
+        git('https://github.com/msharran/labs.git', "main", {node -> node / 'extensions' << '' })
       }
       scriptPath("k8s/jenkins-operator/Jenkinsfile.groovy")
     }

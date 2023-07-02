@@ -1,0 +1,26 @@
+---
+plugins:
+- name: kubernetes
+  version: 3937.vd7b_82db_e347b_
+- name: kubernetes-client-api
+  version: 6.4.1-215.v2ed17097a_8e9
+- name: caffeine-api
+  version: 3.1.6-115.vb_8b_b_328e59d8
+- name: kubernetes-credentials
+  version: 0.10.0
+- name: workflow-job
+  version: 1308.v58d48a_763b_31
+- name: workflow-aggregator
+  version: 596.v8c21c963d92d
+- name: git
+  version: 5.1.0
+- name: job-dsl
+  version: '1.84'
+- name: configuration-as-code
+  version: 1647.ve39ca_b_829b_42
+- name: kubernetes-credentials-provider
+  version: 1.225.v14f9e6b_28f53
+- name: ionicons-api
+  version: 56.v1b_1c8c49374e
+- name: ssh-credentials
+  version: 305.v8f4381501156
