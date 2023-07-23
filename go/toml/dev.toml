@@ -1,0 +1,79 @@
+[service]
+desired_count = 1
+path = "/"
+alb_scheme = "internal"
+health_check_path = "/metrics"
+health_check_interval_seconds = 45
+unhealthy_threshold_count = 3
+health_check_timeout_seconds = 25
+healthy_threshold_count = 3
+
+[container]
+# Port on which the service listens
+# NOTE: EXPOSE 9900 in Dockerfile
+port = 9900
+
+# CPU millis required, 1 CPU core = 1024 millis
+cpu = 512 
+
+# RAM memory required by service in MB
+memory = 1024
+
+# Environment Variables required by service container
+[[container.environments]]
+  # Constant / Static variables tuned for run_env
+name = "AWS_DEFAULT_REGION"
+value = "ap-south-1"
+
+[[container.environments]]
+name = "SLEEP_SECS"
+value = 360
+
+[[container.environments]]
+name = "ERROR_PERCENT"
+value = 0.55
+
+[[container.environments]]
+# Watcher environment variables
+name = "WATCHER_AWS_REGION"
+value = "ap-south-1"
+
+[[container.environments]]
+name = "WATCHER_AWS_ACCOUNT_ID"
+value = "794790222244"
+
+[[container.environments]]
+name = "WATCHER_AWS_ACCOUNT_NAME"
+value = "central" 
+
+[[container.environments]]
+name = "WATCHER_SQS_QUEUE_NAME"
+value = "caterpillar-scm-watcher"
+
+[[container.environments]]
+name = "WATCHER_JENKINS_ENDPOINT"
+value = "https://jenkins.infra.dreamplug.net"
+
+[[container.environments]]
+name = "WATCHER_JENKINS_USERNAME" # cannot create bot user due to compliance, need to check for alternate options
+value = "sharran.m@dreamplug.in"
+
+[[container.environments]]
+  # Dynamic / Secret variables tuned for run_env
+name = "DP_SSM_KEYS"
+value = """
+    {
+      "region": "ap-south-1",
+      "prefixed_keys": [
+        {
+          "prefix": "/conf/{{ DP_SERVICE_NAME }}/{{ DP_RUN_ENV }}/v1",
+          "region": "ap-south-1",
+          "keys": {
+            "AWS_ACCESS_KEY_ID": {},
+            "AWS_SECRET_ACCESS_KEY": {},
+            "WATCHER_JENKINS_TOKEN": {}
+          }
+        }
+      ]
+    }
+"""
