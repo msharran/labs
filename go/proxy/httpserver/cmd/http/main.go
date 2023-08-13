@@ -2,19 +2,34 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+	"os"
+	"time"
+
+	"github.com/lmittmann/tint"
+	"log/slog"
 )
 
 func main() {
+	log := slog.New(
+		tint.NewHandler(os.Stderr, &tint.Options{
+			Level:      slog.LevelInfo,
+			TimeFormat: time.UnixDate,
+		}),
+	)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("handling request", r.Host)
+		log := log.WithGroup("request")
+		
+		log.Info("handling request", "url", r.Host)
 		fmt.Fprintln(w, "Hello, World")
+		log.Info("successfully handled request", "status", http.StatusOK)
 	})
 
-	log.Printf("started the server at port %d\n", 8080)
+	log.Info("started the server", "addr", ":8080")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Error("failed to handle requests", "err", err)
+		os.Exit(1)
 	}
 }
