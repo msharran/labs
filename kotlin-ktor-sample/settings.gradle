@@ -1,0 +1,13 @@
+rootProject.name = "com.example.ktor-sample"
+
+
+buildCache {
+    local {
+        enabled = false 
+    }
+    remote(HttpBuildCache) {
+            url = 'http://localhost/cache/'
+            push = true
+            allowInsecureProtocol = true
+    }
+}

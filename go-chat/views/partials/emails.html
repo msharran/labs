@@ -1,0 +1,8 @@
+<ul>
+    {{ range .Emails }}
+    <li>{{ . }}</li>
+    {{ else }}
+    <li>No emails are registered. Pls enter your email and click register</li>
+    {{ end }}
+</ul>
+

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package config;
+
+option go_package = "./config";
+
+
+message Person {
+    string name = 1;
+
+    repeated string email_ids  = 2;
+
+    Gender gender = 4;
+   
+    map<string, string> tags = 7;
+}
+
+enum Gender {
+    MALE = 0;
+    FEMALE = 1;
+    TRANSGENDER = 2;
+    OTHER_WONDERFUL_GENDER = 100;
+}
