@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
+
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 type TCPServerConfig struct {
@@ -66,6 +67,11 @@ func (svr *TCPServer) handleRequest(conn net.Conn) {
 		msg := make([]byte, 9)
 		_, err := r.Read(msg)
 		if err != nil {
+			// if EOF return
+			if err.Error() == "EOF" {
+				log.Info("connection closed by client")
+				break
+			}
 			log.Error("error reading from connection", err)
 			break
 		}

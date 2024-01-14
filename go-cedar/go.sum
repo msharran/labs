@@ -1,0 +1,4 @@
+github.com/Joffref/cedar v0.0.2 h1:5zMQc2ooWyU3Ak0ZR+CwC+PE8/XUyRqEPfOOHf6jYsw=
+github.com/Joffref/cedar v0.0.2/go.mod h1:UAEWpEdqQ6hM3Dvt+30F2by43X1711jJHGlgUwNSbMg=
+github.com/tetratelabs/wazero v1.1.0 h1:EByoAhC+QcYpwSZJSs/aV0uokxPwBgKxfiokSUwAknQ=
+github.com/tetratelabs/wazero v1.1.0/go.mod h1:wYx2gNRg8/WihJfSDxA1TIL8H+GkfLYm+bIfbblu9VQ=

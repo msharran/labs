@@ -1,0 +1,7 @@
+{
+    "principal": "ServiceAccount::\"bar-service\"",
+    "action": "Action::\"CreateTask\"",
+    "resource": "Resource::\"\"",
+    "context": {
+    }
+}

@@ -7,8 +7,9 @@ import (
 	"log"
 	"net"
 
-	pb "github.com/msharran/labs/go-grpc/internal/helloworld"
+	pb "github.com/msharran/labs/go-grpc/pkg/helloworld"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 var port int
@@ -19,12 +20,13 @@ func init() {
 
 func main() {
 	flag.Parse()
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	grpcServer := grpc.NewServer()
+	reflection.Register(grpcServer)
 	pb.RegisterGreeterServer(grpcServer, newServer())
 
 	fmt.Printf("gRPC: serving on %s\n", lis.Addr().String())

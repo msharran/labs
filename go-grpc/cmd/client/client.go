@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 
-	pb "github.com/msharran/labs/go-grpc/internal/helloworld"
+	pb "github.com/msharran/labs/go-grpc/pkg/helloworld"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

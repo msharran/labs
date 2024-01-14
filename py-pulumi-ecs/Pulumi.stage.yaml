@@ -1,0 +1,5 @@
+config:
+  aws:region: ap-south-1
+  python-pulumi-ecs:containerPort: "8080"
+  python-pulumi-ecs:cpu: "512"
+  python-pulumi-ecs:memory: "128"

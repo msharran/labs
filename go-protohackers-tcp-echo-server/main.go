@@ -3,7 +3,7 @@ package main
 func main() {
 	svr := NewTCPServer(TCPServerConfig{
 		Host: "localhost",
-		Port: "8080",
+		Port: "7993",
 	})
 	svr.ListenAndServe()
 }
