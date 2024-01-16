@@ -1,16 +1,18 @@
+{{- $fullName := include "go-grpc.clientFullname" . -}}
+{{- $svcPort := .Values.clientService.port -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "go-grpc.fullname" . }}
+  name: {{ $fullName }}
   labels:
-    {{- include "go-grpc.labels" . | nindent 4 }}
+    {{- include "go-grpc.clientLabels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "go-grpc.selectorLabels" . | nindent 6 }}
+      {{- include "go-grpc.clientSelectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -18,7 +20,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "go-grpc.labels" . | nindent 8 }}
+        {{- include "go-grpc.clientLabels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -27,27 +29,28 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "go-grpc.serviceAccountName" . }}
+      serviceAccountName: {{ include "go-grpc.clientServiceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: {{ $fullName }}
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+           {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.clientImage.repository }}:{{ .Values.clientImage.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.clientImage.pullPolicy }}
+          args: ["-port={{ .Values.clientService.port }}", "-server-addr={{ include "go-grpc.fullname" . }}:{{ .Values.service.port }}"]
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.clientService.port }}
               protocol: TCP
           readinessProbe:
-            exec:
-              command: ["/app/bin/grpcurl -plaintext -d '{\"name\":\"healthprobe\"}' 127.0.0.1:3456 helloworld.Greeter.SayHello"]
-            # initialDelaySeconds: 5
+            httpGet:
+              path: /hello
+              port: {{ .Values.clientService.port }}
           livenessProbe:
-            exec:
-              command: ["/app/bin/grpcurl -plaintext -d '{\"name\":\"healthprobe\"}' 127.0.0.1:3456 helloworld.Greeter.SayHello"]
-            # initialDelaySeconds: 10
+            httpGet:
+              path: /hello
+              port: {{ .Values.clientService.port }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}

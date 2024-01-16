@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "go-grpc.clientFullname" . }}
+  labels:
+    {{- include "go-grpc.clientLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.clientService.type }}
+  ports:
+    - port: {{ .Values.clientService.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "go-grpc.clientSelectorLabels" . | nindent 4 }}

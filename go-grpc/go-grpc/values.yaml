@@ -10,11 +10,32 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "1.0.0"
 
+clientImage:
+  repository: ghcr.io/msharran/go-grpc
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "client-1.0.0"
+
 imagePullSecrets: []
+
 nameOverride: "go-grpc"
 fullnameOverride: "go-grpc"
 
+clientNameOverride: "go-grpc-client"
+clientFullnameOverride: "go-grpc-client"
+
 serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+clientServiceAccount:
   # Specifies whether a service account should be created
   create: true
   # Automatically mount a ServiceAccount's API credentials?
@@ -42,6 +63,10 @@ securityContext: {}
 service:
   type: ClusterIP
   port: 3456
+
+clientService:
+  type: ClusterIP
+  port: 3455
 
 ingress:
   enabled: false
