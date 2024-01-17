@@ -15,7 +15,7 @@ DRY_RUN_FLAG =
 endif
 
 # find directories with kustomization.yaml files
-KUSTOMIZE_TARGETS = $(shell find kustomize -name kustomization.yaml -exec dirname {} \;)
+KUSTOMIZE_TARGETS = $(shell find kustomize/overlays -name kustomization.yaml -exec dirname {} \;)
 ACTION ?= build
 
 .PHONY: $(KUSTOMIZE_TARGETS)

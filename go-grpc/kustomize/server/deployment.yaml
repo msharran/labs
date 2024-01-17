@@ -33,6 +33,7 @@ spec:
                 - '-d={"name":"healthprobe"}'
                 - "127.0.0.1:3456" 
                 - "helloworld.Greeter.SayHello"
+            initialDelaySeconds: 10
           livenessProbe:
             exec:
               command: 
@@ -41,5 +42,6 @@ spec:
                 - '-d={"name":"healthprobe"}'
                 - "127.0.0.1:3456" 
                 - "helloworld.Greeter.SayHello"
+            initialDelaySeconds: 10
           resources:
             {}

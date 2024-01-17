@@ -3,13 +3,15 @@
   value:
     httpGet:
       port: 3455
-      path: "/hello?name=client-healthprobe"
+      path: "/health"
+    initialDelaySeconds: 10
 - op: replace
   path: /spec/template/spec/containers/0/livenessProbe
   value:
     httpGet:
       port: 3455
-      path: "/hello?name=client-healthprobe"
+      path: "/health"
+    initialDelaySeconds: 10
 - op: replace
   path: /spec/template/spec/containers/0/ports/0/containerPort
   value: 3455

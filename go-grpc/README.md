@@ -17,22 +17,22 @@ Kustomize is recommended
 
 ### Using Kustomize (RECOMMENDED)
 
-1. Install
+1. Install services in stage namespace. It creates namespace as well
 
 ```bash
-make ./kustomize ACTION=apply
+make ./kustomize/overlays/stage ACTION=apply
 ```
 
 2. Uninstall
 
 ```bash
-make ./kustomize ACTION=destroy
+make ./kustomize/overlays/stage ACTION=destroy
 ```
 
 3. Print kustomize output
 
 ```bash
-make ./kustomize
+make ./kustomize/overlays/stage
 ```
 
 ### Using Helm
