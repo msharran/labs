@@ -12,11 +12,33 @@ spin up a local one based on docker using k3d or kind.
 The following instructions assume you are connected to the 
 cluster and a namespace.
 
-Run the following command to install both the
-server and client
+You can install using both Kustomize and Helm.
+Kustomize is recommended
+
+### Using Kustomize (RECOMMENDED)
+
+Install
 
 ```bash
-helm install go-grpc ./go-grpc
+make ./kustomize
+```
 
-watch kubectl get pods
+Uninstall
+
+```bash
+make ./kustomize ACTION=uninstall
+```
+
+### Using Helm
+
+Install
+
+```bash
+make helm-install
+```
+
+Uninstall
+
+```bash
+make helm-uninstall 
 ```
