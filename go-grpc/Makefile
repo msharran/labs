@@ -16,14 +16,16 @@ endif
 
 # find directories with kustomization.yaml files
 KUSTOMIZE_TARGETS = $(shell find kustomize -name kustomization.yaml -exec dirname {} \;)
-ACTION ?= install
+ACTION ?= build
 
 .PHONY: $(KUSTOMIZE_TARGETS)
 $(KUSTOMIZE_TARGETS):
-ifeq ($(ACTION), install)
-	kubectl apply --server-side $(DRY_RUN_FLAG) -k $@
-else ifeq ($(ACTION), uninstall)
-	kubectl delete $(DRY_RUN_FLAG) -k $@
+ifeq ($(ACTION), build)
+	kustomize build $@
+else ifeq ($(ACTION), apply)
+	kustomize build $@ | kubectl apply --server-side $(DRY_RUN_FLAG) -f -
+else ifeq ($(ACTION), destroy)
+	kustomize build $@ | kubectl delete $(DRY_RUN_FLAG) -f -
 endif
 
 .PHONY: helm-install

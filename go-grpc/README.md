@@ -17,27 +17,33 @@ Kustomize is recommended
 
 ### Using Kustomize (RECOMMENDED)
 
-Install
+1. Install
+
+```bash
+make ./kustomize ACTION=apply
+```
+
+2. Uninstall
+
+```bash
+make ./kustomize ACTION=destroy
+```
+
+3. Print kustomize output
 
 ```bash
 make ./kustomize
 ```
 
-Uninstall
-
-```bash
-make ./kustomize ACTION=uninstall
-```
-
 ### Using Helm
 
-Install
+1. Install
 
 ```bash
 make helm-install
 ```
 
-Uninstall
+2. Uninstall
 
 ```bash
 make helm-uninstall 

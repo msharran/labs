@@ -3,13 +3,18 @@
   value:
     httpGet:
       port: 3455
-      path: /hello
+      path: "/hello?name=client-healthprobe"
 - op: replace
   path: /spec/template/spec/containers/0/livenessProbe
   value:
     httpGet:
       port: 3455
-      path: /hello
+      path: "/hello?name=client-healthprobe"
 - op: replace
   path: /spec/template/spec/containers/0/ports/0/containerPort
   value: 3455
+- op: add
+  path: /spec/template/spec/containers/0/args
+  value:
+    - -port=3455
+    - -server-addr=go-grpc:3456
