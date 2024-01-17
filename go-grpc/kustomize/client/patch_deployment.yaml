@@ -1,0 +1,15 @@
+- op: replace
+  path: /spec/template/spec/containers/0/readinessProbe
+  value:
+    httpGet:
+      port: 3455
+      path: /hello
+- op: replace
+  path: /spec/template/spec/containers/0/livenessProbe
+  value:
+    httpGet:
+      port: 3455
+      path: /hello
+- op: replace
+  path: /spec/template/spec/containers/0/ports/0/containerPort
+  value: 3455

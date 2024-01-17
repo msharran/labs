@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-grpc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: go-grpc
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: go-grpc
+    spec:
+      serviceAccountName: go-grpc
+      securityContext:
+        {}
+      containers:
+        - name: go-grpc
+          securityContext:
+            {}
+          image: "ghcr.io/msharran/go-grpc:1.0.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3456
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command: 
+                - "/app/bin/grpcurl"
+                - "-plaintext"
+                - '-d={"name":"healthprobe"}'
+                - "127.0.0.1:3456" 
+                - "helloworld.Greeter.SayHello"
+          livenessProbe:
+            exec:
+              command: 
+                - "/app/bin/grpcurl"
+                - "-plaintext"
+                - '-d={"name":"healthprobe"}'
+                - "127.0.0.1:3456" 
+                - "helloworld.Greeter.SayHello"
+          resources:
+            {}
