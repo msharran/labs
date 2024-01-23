@@ -1,0 +1,13 @@
+dependencies:
+  s3:
+    - name: test-s3-bucket
+      tags:
+        service: genie
+      authz: 
+        snape.service: 
+            - read
+            - write
+        locksmith.service:
+          - read
+          - write
+    - name: test-s3-bucket-2

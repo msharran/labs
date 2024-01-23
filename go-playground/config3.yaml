@@ -1,0 +1,8 @@
+dependencies:
+  s3:
+    - name: test-s3-bucket
+      versioning: false
+      allowed: 
+      - resource: snape.service
+        access:
+        - read

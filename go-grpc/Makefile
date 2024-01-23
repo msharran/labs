@@ -52,5 +52,6 @@ proto_deps:
 fmt:
 	go fmt ./...
 
+.PHONY: vet
 vet:
 	go vet ./...

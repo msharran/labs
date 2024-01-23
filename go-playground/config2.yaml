@@ -1,0 +1,11 @@
+aws_region: ap-south-1
+dependencies:
+  s3:
+    - name: test-s3-bucket 
+      versioning: false
+      encrypt_object: false
+    - name: _common
+      versioning: true
+      encrypt_object: true
+      tags:
+        encrypted: true
