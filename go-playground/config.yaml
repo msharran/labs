@@ -1,13 +1,23 @@
 dependencies:
   s3:
     - name: test-s3-bucket
+      encryption: false
       tags:
-        service: genie
+        config: true
       authz: 
-        snape.service: 
-            - read
-            - write
-        locksmith.service:
+        bar.service: 
+          - read
+          - write
+        baz.service:
           - read
           - write
     - name: test-s3-bucket-2
+      authz: 
+        bar.service: 
+          - read
+          - write
+        baz.service:
+          - read
+          - write
+
+bar: baz

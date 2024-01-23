@@ -1,0 +1,31 @@
+aws_region: ap-south-1
+bar: baz
+dependencies:
+    s3:
+        - authz:
+            bar.service:
+                - read
+            baz.service:
+                - read
+                - write
+          encryption: true
+          name: test-s3-bucket
+          tags:
+            config: true
+            config2: true
+            config3: true
+          versioning: false
+        - authz:
+            bar.service:
+                - read
+                - write
+            baz.service:
+                - read
+                - write
+          encryption: true
+          name: test-s3-bucket-2
+          tags:
+            config2: true
+          versioning: true
+foo: bar
+
