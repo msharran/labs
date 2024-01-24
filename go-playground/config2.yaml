@@ -1,4 +1,7 @@
 dependencies:
+  sqs:
+    - name: test-sqs
+      dlq: foo
   s3:
     - name: test-s3-bucket 
       versioning: false

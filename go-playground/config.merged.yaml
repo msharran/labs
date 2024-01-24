@@ -9,6 +9,8 @@ dependencies:
                 - read
                 - write
           encryption: true
+          labels:
+            - baz
           name: test-s3-bucket
           tags:
             config: true
@@ -27,5 +29,8 @@ dependencies:
           tags:
             config2: true
           versioning: true
+    sqs:
+        - dlq: foo
+          name: test-sqs
 foo: bar
 

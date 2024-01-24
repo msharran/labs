@@ -1,6 +1,8 @@
 dependencies:
   s3:
     - name: test-s3-bucket
+      labels: 
+      - baz
       tags:
         config3: true
       authz: 

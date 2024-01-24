@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
@@ -87,10 +86,6 @@ func mergeMapKeysRecursively(src, dest interface{}) error {
 			destMap[k] = srcMap[k]
 		}
 	}
-	return nil
-}
-
-func mergeCommonDependencyListItems(srcDepList, destDepList []map[string]interface{}) error {
 	return nil
 }
 
@@ -184,7 +179,6 @@ func mergeMatchingSrcDepIntoDstDep(srcDepList, destDepList []map[string]interfac
 			}
 
 			if destDepItemName == srcDepItemName {
-				fmt.Fprintln(os.Stderr, "found matching name in destDepItem", srcDepItemName, destDepItemName)
 				// - if srcDepItemKey and destDepItemKey are the same
 				//   then recursively merge it by calling mergeItemRecursively
 				for srcDepItemKey, srcDepItemValue := range srcDepItem {
@@ -207,7 +201,6 @@ func mergeMatchingSrcDepIntoDstDep(srcDepList, destDepList []map[string]interfac
 					// - if the values of the keys are different types, then we need
 					// to fail with an error
 
-					fmt.Fprintln(os.Stderr, "found matching key in destDepItem", srcDepItemKey, destDepItemValue, ok)
 					err := mergeMapKeysRecursively(srcDepItemValue, destDepItemValue)
 					if err != nil {
 						if errors.Is(err, ErrIsNotMap) {
@@ -238,7 +231,6 @@ func mergeCommonSrcDepIntoAllDstDep(srcDepList, destDepList []map[string]interfa
 		// the "_common" name in dest (if it exists)
 
 		if srcDepItemName == "_common" {
-			fmt.Fprintln(os.Stderr, "found _common in srcDepItem")
 			for srcDepItemKey, srcDepItemValue := range srcDepItem {
 				if srcDepItemKey == "name" {
 					continue
@@ -315,7 +307,6 @@ func main() {
 				// get the dependencies from src and dest
 				srcDeps, err := parseDependencies(src[k])
 				if err != nil {
-					fmt.Fprintln(os.Stderr, "failed to parse src dependencies")
 					continue
 				}
 
@@ -326,14 +317,12 @@ func main() {
 
 				destDeps, err := parseDependencies(dest[k])
 				if err != nil {
-					fmt.Fprintln(os.Stderr, "failed to parse dest dependencies")
 					continue
 				}
 
 				// merge the dependencies from src into dest
 				err = mergeDependencies(srcDeps, destDeps)
 				if err != nil {
-					fmt.Fprintln(os.Stderr, "failed to merge dependencies: ", err)
 					continue
 				}
 
@@ -348,11 +337,8 @@ func main() {
 	})
 
 	k := koanf.New(".")
-	fmt.Fprintln(os.Stderr, "loading config.yaml")
 	k.Load(file.Provider("config.yaml"), yaml.Parser(), mergeFunc)
-	fmt.Fprintln(os.Stderr, "loading config2.yaml")
 	k.Load(file.Provider("config2.yaml"), yaml.Parser(), mergeFunc)
-	fmt.Fprintln(os.Stderr, "loading config3.yaml")
 	k.Load(file.Provider("config3.yaml"), yaml.Parser(), mergeFunc)
 
 	o, err := k.Marshal(yaml.Parser())

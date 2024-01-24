@@ -1,6 +1,11 @@
 dependencies:
+  sqs:
+    - name: test-sqs
   s3:
     - name: test-s3-bucket
+      labels: 
+      - foo
+      - bar
       encryption: false
       tags:
         config: true
