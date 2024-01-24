@@ -9,33 +9,6 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
-// dependencies:
-//
-//	s3:
-//	  - name: test-s3-bucket
-//	    authz:
-//	    - resource: snape.service
-//	      accessc
-//	        - read
-//	        - write
-//	    - resource: locksmith.service
-//	      access:
-//	        - read
-//	        - write
-//	  - name: test-s3-bucket-2
-
-//	s3:
-//	  - name: test-s3-bucket
-//	    authz:
-//	    - resource: snape.service
-//	      access:
-//	        - read
-//	    - resource: locksmith.service
-//	      access:
-//	        - read
-//	        - write
-//	  - name: test-s3-bucket-2
-
 // RecursiveMapMerge merges two maps recursively.
 // - if the values of the keys are maps, then we need to merge the
 //   keys of the maps recursively
