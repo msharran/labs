@@ -20,3 +20,7 @@ sharranm@2184-X1 ~/p/p/l/go-h2c> go run main.go                                 
 2024/02/19 14:38:38 Received: sharran
 2024/02/19 14:38:47 GET /hello/sharran
 ```
+
+NOTE: consider using HTTP2 directly instead of using this method 
+for high performance services, since this is less performant 
+due to h1 to h2 highjacking on the fly.
