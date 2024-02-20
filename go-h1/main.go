@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"go-h1/internal/server"
 	"log/slog"
-	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 var (
@@ -25,25 +25,34 @@ func main() {
 	flag.Parse()
 
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	ctx, cancel := context.WithCancel(context.Background())
 
-	p, ok := os.LookupEnv("PORT")
-	if ok {
-		log.Info("PORT environment variable found", "port", p)
-		port = p
-	}
-
-	ctx := server.WithLogger(context.Background(), log)
-	s := server.NewServer(ctx, server.ServerOpts{
-		// Flags: server.FLAG_DISABLE_LOGGING | server.FLAG_DISABLE_ADMIN,
+	s := server.NewServer(server.ServerOpts{
+		Ctx:  ctx,
+		Addr: ":" + port,
+		Log:  log,
 	})
 
-	log.Info("Starting server", "port", port)
+	// handle signals
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	err := http.ListenAndServe(fmt.Sprintf(":%s", port), s)
-	if err != nil {
-		log.Error("Server failed", "error", err)
+	go func() {
+		<-sigs
+		log.Info("interrupt signal received, shutting down")
+		cancel()
+	}()
+
+	var exitCode int
+	defer func() {
+		os.Exit(exitCode)
+	}()
+
+	if err := s.Run(); err != nil {
+		log.Error(err.Error())
 		os.Exit(1)
 	}
 
-	log.Info("Server stopped")
+	s.Wait()
+	log.Info("server exited gracefully")
 }

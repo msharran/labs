@@ -18,3 +18,47 @@ func (s *Server) handleAdminGet() http.HandlerFunc {
 		w.Write([]byte("Hello, Admin!"))
 	}
 }
+
+func (s *Server) handleSecretsGet() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		key := r.PathValue("key")
+
+		if key == "" {
+			http.Error(w, "missing key", http.StatusBadRequest)
+			return
+		}
+
+		secret, err := s.sm.Get(key)
+		if err != nil {
+			http.Error(w, "secret not found", http.StatusNotFound)
+			return
+		}
+
+		w.Write([]byte(secret))
+	}
+}
+
+func (s *Server) handleSecretsCreate() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		key := r.PathValue("key")
+		secret := r.Header.Get("X-Secret")
+
+		if key == "" {
+			http.Error(w, "missing key", http.StatusBadRequest)
+			return
+		}
+
+		if secret == "" {
+			http.Error(w, "missing secret", http.StatusBadRequest)
+			return
+		}
+
+		err := s.sm.Set(key, secret)
+		if err != nil {
+			http.Error(w, "failed to set secret", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+	}
+}
