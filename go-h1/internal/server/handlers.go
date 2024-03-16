@@ -1,6 +1,9 @@
 package server
 
-import "net/http"
+import (
+	"encoding/json"
+	"net/http"
+)
 
 func (s *Server) handleHelloGet() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -16,6 +19,22 @@ func (s *Server) handleHelloGet() http.HandlerFunc {
 func (s *Server) handleAdminGet() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, Admin!"))
+	}
+}
+
+func (s *Server) handleSecretsGetKeys() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		keys := s.sm.Keys()
+		err := json.NewEncoder(w).Encode(struct {
+			Keys []string
+		}{
+			Keys: keys,
+		})
+
+		if err != nil {
+			http.Error(w, "failed to encode keys", http.StatusInternalServerError)
+			return
+		}
 	}
 }
 

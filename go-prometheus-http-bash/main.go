@@ -33,6 +33,10 @@ var (
 	)
 )
 
+type store struct {
+	durations map[string]float64
+}
+
 func main() {
 	// We use a registry here to benefit from the consistency checks that
 	// happen during registration.

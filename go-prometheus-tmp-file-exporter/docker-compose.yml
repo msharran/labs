@@ -1,0 +1,13 @@
+services:
+  tmp-file-exporter:
+    build: .
+    volumes:
+      - "/tmp:/tmp"
+    ports:
+      - "8080:8080"
+  prometheus:
+    image: "prom/prometheus"
+    volumes:
+      - "$PWD/prometheus.yml:/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"

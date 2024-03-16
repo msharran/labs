@@ -49,6 +49,20 @@ func (s *SecretsManager) Set(key, value string) error {
 	return <-err
 }
 
+func (s *SecretsManager) Keys() []string {
+	keys := make(chan []string)
+
+	s.actionC <- func() {
+		var k []string
+		for key := range s.secrets {
+			k = append(k, key)
+		}
+		keys <- k
+	}
+
+	return <-keys
+}
+
 func (s *SecretsManager) Get(key string) (string, error) {
 	result := make(chan struct {
 		value string

@@ -4,4 +4,4 @@ PORT ?= 3000
 
 .PHONY: run
 run:
-	PORT=$(PORT) go run main.go
+	go run main.go -port $(PORT)
