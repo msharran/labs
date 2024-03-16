@@ -1,0 +1,25 @@
+version: '3.3'
+services:
+  db:
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'db'
+      # So you don't have to use root, but you can if you like
+      MYSQL_USER: 'sharran'
+      # You can use whatever password you like
+      MYSQL_PASSWORD: 'sharran123'
+      # Password for root access
+      MYSQL_ROOT_PASSWORD: 'admin123'
+    ports:
+      # <Port exposed> : <MySQL Port running inside container>
+      - '3306:3306'
+    expose:
+      # Opens port 3306 on the container
+      - '3306'
+      # Where our data will be persisted
+    volumes:
+      - ./data:/var/lib/mysql
+
+
+CREATE TABLE Secrets ( id int NOT NULL AUTO_INCREMENT, key varchar(255) NOT NULL, value varchar(255), PRIMARY KEY (id));

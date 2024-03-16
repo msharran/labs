@@ -6,4 +6,5 @@ func (s *Server) routes() {
 
 	s.mux.HandleFunc("GET /secrets/{key}", s.handleSecretsGet())
 	s.mux.HandleFunc("POST /secrets/{key}", s.handleSecretsCreate())
+	s.mux.HandleFunc("GET /secrets", s.handleSecretsGetKeys())
 }
