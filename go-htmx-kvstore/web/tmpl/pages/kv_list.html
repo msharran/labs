@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    {{ template "head" . }}
+</head>
+
+<body>
+    <div class="container mx-auto p-4">
+        <div class="flex flex-row justify-between">
+            <h1 class="text-3xl font-bold">Key Values</h1>
+            <a href="/keyvalues/new" class="btn btn-primary btn-xs">New Key Value</a>
+        </div>
+        {{ template "kv_list" .KeyValues }}
+    </div>
+</body>
+</html>
+
+{{ define "kv_list" }}
+<div class="overflow-x-auto p-4">
+    <table class="table">
+        <!-- head -->
+        <thead>
+            <tr>
+                <th>
+                    <label>
+                        <input type="checkbox" class="checkbox" />
+                    </label>
+                </th>
+                <th>Key</th>
+                <th>Value</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range . }}
+            <tr>
+                <th>
+                    <label>
+                        <input type="checkbox" class="checkbox" />
+                    </label>
+                </th>
+                <td>{{ .Key }}</td>
+                <td>{{ .Value }}</td>
+                <td>
+                    <a hx-put="/keyvalues/{{ .Key }}" class="btn btn-ghost btn-xs">
+                        <input type="hidden" name="key" value="{{ .Key }}"></input>
+                        <input type="hidden" name="value" value="{{ .Value }}"></input>
+                        Edit
+                    </a>
+                </td>
+                <td>
+                    <a hx-delete="/keyvalues/{{ .Key }}" class="btn btn-danger btn-xs">
+                        <input type="hidden" name="key" value="{{ .Key }}"></input>
+                        Delete
+                    </a>
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+</div>
+{{ end }}

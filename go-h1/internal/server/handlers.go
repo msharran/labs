@@ -2,18 +2,25 @@ package server
 
 import (
 	"encoding/json"
+	"go-h1/internal/views"
 	"net/http"
+
+	"github.com/a-h/templ"
 )
 
 func (s *Server) handleHelloGet() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// name := r.PathValue("name")
+		// if name == "" {
+		// 	http.Error(w, "missing name", http.StatusBadRequest)
+		// 	return
+		// }
+		// w.Write([]byte("Hello, " + name + "!"))
 		name := r.PathValue("name")
-		if name == "" {
-			http.Error(w, "missing name", http.StatusBadRequest)
-			return
-		}
-		w.Write([]byte("Hello, " + name + "!"))
+		component := views.Hello(name)
+		return templ.Handler(component)
 	}
+
 }
 
 func (s *Server) handleAdminGet() http.HandlerFunc {

@@ -11,3 +11,9 @@ services:
       - "$PWD/prometheus.yml:/etc/prometheus/prometheus.yml"
     ports:
       - "9090:9090"
+  grafana:
+    image: "grafana/grafana-oss:latest-ubuntu"
+    volumes:
+      - "$PWD/prometheus.yml:/etc/prometheus/prometheus.yml"
+    ports:
+      - "3000:3000"

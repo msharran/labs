@@ -1,0 +1,15 @@
+<h1>Key Value</h1>
+<p><a href="/keyvalues">Back to list</a></p>
+
+<div>
+    <p><strong>Key:</strong> {{ .Key }}</p>
+    <p><strong>Value:</strong> {{ .Value }}</p>
+    <div class="flex flex-row space-x-2">
+        <button hx-post="/keyvalues/{{ .Key }}/edit">
+            Edit
+        </button>
+        <button hx-delete="/keyvalues/{{ .Key }}/delete" hx-confirm="Are you sure?">
+            Delete
+        </button>
+    </div>
+</div>
