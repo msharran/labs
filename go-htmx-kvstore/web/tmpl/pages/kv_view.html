@@ -1,0 +1,32 @@
+{{ define "body" }}
+<div class="container mx-auto p-4">
+    <div class="flex flex-row justify-between">
+        <h1 class="text-3xl font-bold">new key value</h1>
+    </div>
+    {{ template "kv" . }}
+</div>
+{{ end }}
+
+{{ block "kv" . }}
+<div class="overflow-x-auto p-4">
+    <form  class="form">
+        <label class="input input-bordered flex items-center gap-2 mt-4">
+            key
+            <input type="text" class="grow" placeholder="key" name="key"
+            {{ if .Key }} value="{{ .Key }}" {{ end }}
+            />
+        </label>
+        <label class="input input-bordered flex items-center gap-2 mt-4">
+            value
+            <input type="text" class="grow" placeholder="key" name="value"
+            {{ if .Value }} value="{{ .Value }}" {{ end }}
+            />
+        </label>
+        <div class="flex flex-row justify-end gap-2 mt-4">
+            <button hx-post="/kv" hx-target="#alerts" class="btn btn-primary">Save</button>
+            <a href="/kv" hx-boost="true" class="btn btn-ghost ml-4">Back</a>
+        </div>
+    </form>
+</div>
+<div id="alerts" class="mt-4"></div>
+{{ end }}

@@ -1,20 +1,12 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-    {{ template "head" . }}
-</head>
-
-<body>
-    <div class="container mx-auto p-4">
-        <div class="flex flex-row justify-between">
-            <h1 class="text-3xl font-bold">Key Values</h1>
-            <a href="/keyvalues/new" class="btn btn-primary btn-xs">New Key Value</a>
-        </div>
-        {{ template "kv_list" .KeyValues }}
+{{ define "body" }}
+<div class="container mx-auto p-4">
+    <div class="flex flex-row justify-between">
+        <h1 class="text-3xl font-bold">Key Values</h1>
+        <a hx-boost="true" href="/kv/new" class="btn btn-primary btn-xs">New Key Value</a>
     </div>
-</body>
-</html>
+    {{ template "kv_list" .KeyValues }}
+</div>
+{{ end }}
 
 {{ define "kv_list" }}
 <div class="overflow-x-auto p-4">
@@ -44,17 +36,15 @@
                 <td>{{ .Key }}</td>
                 <td>{{ .Value }}</td>
                 <td>
-                    <a hx-put="/keyvalues/{{ .Key }}" class="btn btn-ghost btn-xs">
-                        <input type="hidden" name="key" value="{{ .Key }}"></input>
-                        <input type="hidden" name="value" value="{{ .Value }}"></input>
+                    <a hx-boost="true" href="/kv/{{ .Key }}" class="btn btn-primary btn-xs">
                         Edit
                     </a>
                 </td>
                 <td>
-                    <a hx-delete="/keyvalues/{{ .Key }}" class="btn btn-danger btn-xs">
-                        <input type="hidden" name="key" value="{{ .Key }}"></input>
+                    <button hx-delete="/kv/{{ .Key }}" hx-confirm="Are you sure?" hx-target="closest tr"
+                        hx-swap="outerHTML swap:150ms" class="btn btn-error btn-xs">
                         Delete
-                    </a>
+                    </button>
                 </td>
             </tr>
             {{ end }}

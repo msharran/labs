@@ -6,3 +6,11 @@ type KeyValue struct {
 }
 
 type KeyValues []*KeyValue
+
+type User struct {
+	Username string
+	Password string
+	Token    []byte
+}
+
+type Users []*User

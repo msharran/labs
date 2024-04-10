@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
+var registeredUsers = data.Users{}
 var inMemKvs = data.KeyValues{
 	{Key: "key1", Value: "value1"},
 	{Key: "key2", Value: "value2"},
@@ -17,22 +18,93 @@ var inMemKvs = data.KeyValues{
 func main() {
 	e := echo.New()
 	e.Use(middleware.Logger())
-	mw.UseNewTemplateRenderer(e,
-		"web/tmpl/partials/*.html",
-		"web/tmpl/pages/*.html",
-	)
+	e.Pre(middleware.RemoveTrailingSlash())
+	mw.MustCompileTemplates(e)
 
-	e.GET("/keyvalues", func(c echo.Context) error {
-		// if user is already authenticated, redirect to home
-		// cookie, err := c.Cookie("username")
-		// if err != nil {
-		// 	return c.Render(200, "register.html", nil)
-		// }
-		// username := cookie.Value
-
-		return c.Render(200, "kv_list.html", echo.Map{
+	e.GET("/kv", func(c echo.Context) error {
+		return c.Render(200, "pages/kv_list.html", echo.Map{
 			"Title":     "Key Values",
 			"KeyValues": inMemKvs,
+		})
+	})
+
+	e.GET("/kv/new", func(c echo.Context) error {
+		return c.Render(200, "pages/kv_view.html", echo.Map{
+			"Title": "New Key Value",
+		})
+	})
+
+	e.GET("/kv/:key", func(c echo.Context) error {
+		key := c.Param("key")
+
+		var kv *data.KeyValue
+		for _, k := range inMemKvs {
+			if k.Key == key {
+				kv = k
+				break
+			}
+		}
+
+		if kv == nil {
+			return c.Render(404, "pages/not_found.html", echo.Map{
+				"Title": "Not Found",
+			})
+		}
+
+		return c.Render(200, "pages/kv_view.html", echo.Map{
+			"Title": "Edit Key Value",
+			"Key":   kv.Key,
+			"Value": kv.Value,
+		})
+	})
+
+	e.POST("/kv", func(c echo.Context) error {
+		key := c.FormValue("key")
+		value := c.FormValue("value")
+
+		if key == "" || value == "" {
+			return c.Render(200, "kv_empty", echo.Map{
+				"Key":   key,
+				"Value": value,
+			})
+		}
+
+		var exists bool
+		for _, kv := range inMemKvs {
+			if kv.Key == key {
+				kv.Value = value
+				exists = true
+				break
+			}
+		}
+
+		if !exists {
+			inMemKvs = append(inMemKvs, &data.KeyValue{
+				Key:   key,
+				Value: value,
+			})
+		}
+
+		return c.Render(200, "kv_created", nil)
+	})
+
+	e.DELETE("/kv/:key", func(c echo.Context) error {
+		key := c.Param("key")
+
+		for i, kv := range inMemKvs {
+			if kv.Key == key {
+				inMemKvs = append(inMemKvs[:i], inMemKvs[i+1:]...)
+				break
+			}
+		}
+
+		return c.NoContent(200)
+	})
+
+	// Registering a user
+	e.GET("/", func(c echo.Context) error {
+		return c.Render(200, "pages/not_found.html", echo.Map{
+			"Title": "Not Found",
 		})
 	})
 
