@@ -10,7 +10,7 @@ type KeyValues []*KeyValue
 type User struct {
 	Username string
 	Password string
-	Token    []byte
+	Token    string
 }
 
-type Users []*User
+type Users map[string]*User

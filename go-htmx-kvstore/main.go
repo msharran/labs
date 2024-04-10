@@ -1,14 +1,22 @@
 package main
 
 import (
+	"fmt"
 	mw "go-htmx-kvstore/internal/middleware"
 	"go-htmx-kvstore/web/data"
+	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
-var registeredUsers = data.Users{}
+var registeredUsers = data.Users{
+	"admin": {
+		Username: "admin",
+		Password: "admin",
+	},
+}
 var inMemKvs = data.KeyValues{
 	{Key: "key1", Value: "value1"},
 	{Key: "key2", Value: "value2"},
@@ -22,6 +30,30 @@ func main() {
 	mw.MustCompileTemplates(e)
 
 	e.GET("/kv", func(c echo.Context) error {
+		token, err := c.Cookie("token")
+		if err != nil {
+			c.Logger().Error(fmt.Errorf("error getting token: %w", err))
+			return c.Redirect(http.StatusFound, "/login")
+		}
+
+		if token.Value == "" {
+			c.Logger().Error(fmt.Errorf("empty token"))
+			return c.Redirect(http.StatusFound, "/login")
+		}
+
+		var user *data.User
+		for _, u := range registeredUsers {
+			if string(u.Token) == token.Value {
+				user = u
+				break
+			}
+		}
+
+		if user == nil {
+			c.Logger().Error(fmt.Errorf("user not found"))
+			return c.Redirect(http.StatusFound, "/login")
+		}
+
 		return c.Render(200, "pages/kv_list.html", echo.Map{
 			"Title":     "Key Values",
 			"KeyValues": inMemKvs,
@@ -102,10 +134,103 @@ func main() {
 	})
 
 	// Registering a user
-	e.GET("/", func(c echo.Context) error {
-		return c.Render(200, "pages/not_found.html", echo.Map{
-			"Title": "Not Found",
+	e.GET("/signup", func(c echo.Context) error {
+		return c.Render(200, "pages/signup.html", echo.Map{
+			"Title": "Sign Up",
 		})
+	})
+
+	e.POST("/signup", func(c echo.Context) error {
+		username := c.FormValue("username")
+		password := c.FormValue("password")
+
+		if username == "" || password == "" {
+			return c.Render(200, "alert_user_empty", nil)
+		}
+
+		_, exists := registeredUsers[username]
+		if exists {
+			return c.Render(200, "alert_user_exists", nil)
+		}
+		registeredUsers[username] = &data.User{
+			Username: username,
+			Password: password,
+		}
+
+		c.Response().Header().Set("HX-Location", "/login")
+		return c.NoContent(200)
+	})
+
+	e.GET("/login", func(c echo.Context) error {
+		token, err := c.Cookie("token")
+		if err == nil && token.Value != "" {
+			// check registered users for token
+			for _, user := range registeredUsers {
+				if string(user.Token) == token.Value {
+					return c.Redirect(http.StatusFound, "/kv")
+				}
+			}
+		}
+
+		return c.Render(200, "pages/login.html", echo.Map{
+			"Title": "Login",
+		})
+	})
+
+	e.POST("/login", func(c echo.Context) error {
+		username := c.FormValue("username")
+		password := c.FormValue("password")
+
+		if username == "" || password == "" {
+			return c.Render(200, "alert_user_empty", nil)
+		}
+
+		user, exists := registeredUsers[username]
+		if !exists || user.Password != password {
+			return c.Render(200, "alert_wrong_password", echo.Map{
+				"Username": username,
+			})
+		}
+
+		// generate random token
+		token := uuid.Must(uuid.NewUUID()).String()
+		user.Token = token
+
+		// https://htmx.org/essays/web-security-basics-with-htmx/#secure-your-cookies
+		// Set-Cookie header instructs browser to send cookie in subsequent requests
+		cookie := &http.Cookie{
+			Name:     "token",
+			Value:    token,
+			HttpOnly: true,
+		}
+		c.SetCookie(cookie)
+		c.Response().Header().Set("HX-Location", "/kv")
+		return c.NoContent(200)
+	})
+
+	e.DELETE("/logout", func(c echo.Context) error {
+		cookie, err := c.Cookie("token")
+		if err != nil {
+			return c.NoContent(http.StatusInternalServerError)
+		}
+
+		for _, user := range registeredUsers {
+			if string(user.Token) == cookie.Value {
+				user.Token = ""
+				break
+			}
+
+		}
+
+		cookie = &http.Cookie{
+			Name:     "token",
+			Value:    "",
+			HttpOnly: true,
+			MaxAge:   -1,
+		}
+		c.SetCookie(cookie)
+		c.Response().Header().Set("HX-Location", "/login")
+		return c.NoContent(200)
 	})
 
 	// e.POST("/start-session", func(c echo.Context) error {

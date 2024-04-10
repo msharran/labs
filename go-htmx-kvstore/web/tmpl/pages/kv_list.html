@@ -2,7 +2,12 @@
 <div class="container mx-auto p-4">
     <div class="flex flex-row justify-between">
         <h1 class="text-3xl font-bold">Key Values</h1>
-        <a hx-boost="true" href="/kv/new" class="btn btn-primary btn-xs">New Key Value</a>
+        <div id="action-buttons" class="flex flex-row gap-2">
+            <a hx-boost="true" href="/kv/new" class="btn btn-primary btn-xs">New Key Value</a>
+            <button hx-delete="/logout" hx-confirm="Are you sure?" class="btn btn-error btn-xs">
+                Logout
+            </button>
+        </div>
     </div>
     {{ template "kv_list" .KeyValues }}
 </div>
