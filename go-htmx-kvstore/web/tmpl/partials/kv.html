@@ -1,14 +1,14 @@
-{{ define "kv_empty" }}
+{{ define "alert_kv_empty" }}
 <div role="alert" class="alert alert-error">
   <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
   <span>Key or Value Empty!</span>
 </div>
 {{ end }}
 
-{{ define "kv_created" }}
+{{ define "alert_kv_saved" }}
 <div role="alert" class="alert alert-success">
   <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-  <span>Key Value Created!</span>
+  <span>Key Value Saved!</span>
 </div>
 {{ end }}
 
@@ -33,9 +33,72 @@
 </div>
 {{ end }}
 
-{{ define "alert_server_error" }}
+{{ define "alert_generic_error" }}
 <div role="alert" class="alert alert-error">
   <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-  <span>Internal Server Error!</span>
+  <div>
+      <div class="font-medium">{{ .Error }}</div>
+  </div>
 </div>
+{{ end }}
+
+{{ define "kv_view" }}
+<tr>
+    <th>
+        <label>
+            <input type="checkbox" class="checkbox" />
+        </label>
+    </th>
+    <td>{{ .Key }}</td>
+    <td>{{ .Value }}</td>
+    <td>
+        <button
+            hx-target="closest tr" 
+            hx-swap="outerHTML"
+            hx-get="/kv/{{ .Key }}/edit?value={{ .Value }}"
+            class="btn btn-primary btn-xs">
+            Edit
+        </button>
+    </td>
+    <td>
+        <button hx-delete="/kv/{{ .Key }}" hx-confirm="Are you sure?" hx-target="closest tr"
+            hx-swap="outerHTML swap:150ms" class="btn btn-error btn-xs">
+            Delete
+        </button>
+    </td>
+</tr>
+{{ end }}
+
+{{ define "kv_edit" }}
+<tr>
+    <th>
+        <label>
+            <input type="checkbox" class="checkbox" />
+        </label>
+    </th>
+    <td>{{ .Key }}</td>
+    <td>
+        <input 
+            type="text" 
+            class="input input-bordered grow" 
+            placeholder="value" 
+            name="value" 
+            value="{{ .Value }}" />
+    </td>
+    <td>
+        <button hx-put="/kv/{{ .Key }}" 
+            hx-target="#alerts" 
+            hx-include="[name='value']"
+            class="btn btn-primary btn-xs">
+            Save
+        </button>
+    </td>
+    <td>
+        <button 
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+            hx-get="/kv/{{ .Key }}/view"
+            class="btn btn-ghost btn-xs">Cancel</button>
+    </td>
+</tr>
 {{ end }}

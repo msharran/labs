@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	mw "go-htmx-kvstore/internal/middleware"
 	"go-htmx-kvstore/web/data"
@@ -9,17 +10,28 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
-var registeredUsers = data.Users{
-	"admin": {
-		Username: "admin",
-		Password: "admin",
-	},
-}
-var inMemKvs = data.KeyValues{
-	{Key: "key1", Value: "value1"},
-	{Key: "key2", Value: "value2"},
+func mustSetupDb() *gorm.DB {
+	db, err := gorm.Open(sqlite.Open("kvstore.db"), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+
+	// enable sqlite foreign key support
+	result := db.Exec("PRAGMA foreign_keys = ON")
+	if result.Error != nil {
+		panic(fmt.Errorf("error enabling foreign key support: %w", result.Error))
+	}
+
+	err = db.AutoMigrate(&data.User{}, &data.KeyValue{})
+	if err != nil {
+		panic(fmt.Errorf("failed to migrate database: %w", err))
+	}
+
+	return db
 }
 
 // https://go.dev/doc/articles/wiki/
@@ -28,6 +40,8 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Pre(middleware.RemoveTrailingSlash())
 	mw.MustCompileTemplates(e)
+
+	db := mustSetupDb()
 
 	e.GET("/kv", func(c echo.Context) error {
 		token, err := c.Cookie("token")
@@ -42,21 +56,22 @@ func main() {
 		}
 
 		var user *data.User
-		for _, u := range registeredUsers {
-			if string(u.Token) == token.Value {
-				user = u
-				break
-			}
+		result := db.Where("token = ?", token.Value).First(&user)
+		if result.Error != nil || user == nil {
+			c.Logger().Error(fmt.Errorf("error getting user: %w", result.Error))
+			return c.Redirect(http.StatusFound, "/login")
 		}
 
-		if user == nil {
-			c.Logger().Error(fmt.Errorf("user not found"))
-			return c.Redirect(http.StatusFound, "/login")
+		var kvs []data.KeyValue
+		result = db.Find(&kvs)
+		if result.Error != nil {
+			c.Logger().Error(fmt.Errorf("error getting key values: %w", result.Error))
+			return c.NoContent(http.StatusInternalServerError)
 		}
 
 		return c.Render(200, "pages/kv_list.html", echo.Map{
 			"Title":     "Key Values",
-			"KeyValues": inMemKvs,
+			"KeyValues": kvs,
 		})
 	})
 
@@ -66,26 +81,30 @@ func main() {
 		})
 	})
 
-	e.GET("/kv/:key", func(c echo.Context) error {
+	e.GET("/kv/:key/edit", func(c echo.Context) error {
+		key := c.Param("key")
+		value := c.QueryParam("value")
+
+		return c.Render(200, "kv_edit", echo.Map{
+			"Key":   key,
+			"Value": value,
+		})
+	})
+
+	e.GET("/kv/:key/view", func(c echo.Context) error {
 		key := c.Param("key")
 
-		var kv *data.KeyValue
-		for _, k := range inMemKvs {
-			if k.Key == key {
-				kv = k
-				break
-			}
-		}
-
-		if kv == nil {
-			return c.Render(404, "pages/not_found.html", echo.Map{
-				"Title": "Not Found",
+		var kv data.KeyValue
+		result := db.Where("key = ?", key).First(&kv)
+		if result.Error != nil {
+			c.Logger().Error(fmt.Errorf("error getting key value: %w", result.Error))
+			return c.Render(200, "alert_generic_error", echo.Map{
+				"Error": result.Error.Error(),
 			})
 		}
 
-		return c.Render(200, "pages/kv_view.html", echo.Map{
-			"Title": "Edit Key Value",
-			"Key":   kv.Key,
+		return c.Render(200, "kv_view", echo.Map{
+			"Key":   key,
 			"Value": kv.Value,
 		})
 	})
@@ -95,39 +114,85 @@ func main() {
 		value := c.FormValue("value")
 
 		if key == "" || value == "" {
-			return c.Render(200, "kv_empty", echo.Map{
+			return c.Render(200, "alert_kv_empty", echo.Map{
 				"Key":   key,
 				"Value": value,
 			})
 		}
 
-		var exists bool
-		for _, kv := range inMemKvs {
-			if kv.Key == key {
-				kv.Value = value
-				exists = true
-				break
-			}
-		}
-
-		if !exists {
-			inMemKvs = append(inMemKvs, &data.KeyValue{
-				Key:   key,
-				Value: value,
+		// if key exists, return error
+		var kv data.KeyValue
+		result := db.Where("key = ?", key).First(&kv)
+		if result.Error == nil {
+			return c.Render(200, "alert_kv_exists", echo.Map{
+				"Key": key,
 			})
 		}
 
-		return c.Render(200, "kv_created", nil)
+		result = db.Create(&data.KeyValue{
+			Key:   key,
+			Value: value,
+		})
+		if result.Error != nil {
+			c.Logger().Error(fmt.Errorf("error creating key value: %w", result.Error))
+			return c.Render(200, "alert_generic_error", echo.Map{
+				"Error": result.Error.Error(),
+			})
+
+		}
+
+		return c.Render(200, "alert_kv_saved", echo.Map{
+			"Key":   key,
+			"Value": value,
+		})
+	})
+
+	e.PUT("/kv/:key", func(c echo.Context) error {
+		key := c.Param("key")
+		value := c.FormValue("value")
+
+		c.Logger().Info(fmt.Sprintf("key: %s, value: %s", key, value))
+
+		if key == "" || value == "" {
+			return c.Render(200, "alert_kv_empty", echo.Map{
+				"Key":   key,
+				"Value": value,
+			})
+		}
+
+		// update value when key == key
+		result := db.Where("key = ?", key).First(&data.KeyValue{})
+		if result.Error != nil {
+			c.Logger().Error(fmt.Errorf("error getting key value: %w", result.Error))
+			return c.Render(200, "alert_generic_error", echo.Map{
+				"Error": result.Error.Error(),
+			})
+		}
+
+		result = db.Model(&data.KeyValue{}).Where("key = ?", key).Update("value", value)
+		if result.Error != nil {
+			c.Logger().Error(fmt.Errorf("error updating key value: %w", result.Error))
+			return c.Render(200, "alert_generic_error", echo.Map{
+				"Error": result.Error.Error(),
+			})
+
+		}
+
+		return c.Render(200, "alert_kv_saved", echo.Map{
+			"Key":   key,
+			"Value": value,
+		})
 	})
 
 	e.DELETE("/kv/:key", func(c echo.Context) error {
 		key := c.Param("key")
 
-		for i, kv := range inMemKvs {
-			if kv.Key == key {
-				inMemKvs = append(inMemKvs[:i], inMemKvs[i+1:]...)
-				break
-			}
+		result := db.Where("key = ?", key).Delete(&data.KeyValue{})
+		if result.Error != nil {
+			c.Logger().Error(fmt.Errorf("error deleting key value: %w", result.Error))
+			return c.Render(200, "alert_generic_error", echo.Map{
+				"Error": result.Error.Error(),
+			})
 		}
 
 		return c.NoContent(200)
@@ -148,13 +213,13 @@ func main() {
 			return c.Render(200, "alert_user_empty", nil)
 		}
 
-		_, exists := registeredUsers[username]
-		if exists {
-			return c.Render(200, "alert_user_exists", nil)
-		}
-		registeredUsers[username] = &data.User{
+		result := db.Create(&data.User{
 			Username: username,
 			Password: password,
+		})
+		if result.Error != nil {
+			c.Logger().Error(fmt.Errorf("error creating user: %w", result.Error))
+			return c.Render(200, "alert_user_exists", nil)
 		}
 
 		c.Response().Header().Set("HX-Location", "/login")
@@ -164,11 +229,16 @@ func main() {
 	e.GET("/login", func(c echo.Context) error {
 		token, err := c.Cookie("token")
 		if err == nil && token.Value != "" {
-			// check registered users for token
-			for _, user := range registeredUsers {
-				if string(user.Token) == token.Value {
-					return c.Redirect(http.StatusFound, "/kv")
-				}
+			var user data.User
+			result := db.Where("token = ?", token.Value).First(&user)
+			if result.Error != nil {
+				c.Render(200, "alert_generic_error", echo.Map{
+					"Error": result.Error.Error(),
+				})
+			}
+
+			if user.Token == token.Value {
+				return c.Redirect(http.StatusFound, "/kv")
 			}
 		}
 
@@ -185,8 +255,20 @@ func main() {
 			return c.Render(200, "alert_user_empty", nil)
 		}
 
-		user, exists := registeredUsers[username]
-		if !exists || user.Password != password {
+		var user data.User
+		result := db.Where("username = ?", username).First(&user)
+		if result.Error != nil {
+			msg := result.Error.Error()
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				msg = "User not found"
+			}
+			c.Logger().Error(fmt.Errorf("error getting user: %w", result.Error))
+			return c.Render(200, "alert_generic_error", echo.Map{
+				"Error": msg,
+			})
+		}
+
+		if user.Password != password {
 			return c.Render(200, "alert_wrong_password", echo.Map{
 				"Username": username,
 			})
@@ -196,6 +278,13 @@ func main() {
 		token := uuid.Must(uuid.NewUUID()).String()
 		user.Token = token
 
+		result = db.Save(&user)
+		if result.Error != nil {
+			return c.Render(200, "alert_generic_error", echo.Map{
+				"Error": result.Error.Error(),
+			})
+		}
+
 		// https://htmx.org/essays/web-security-basics-with-htmx/#secure-your-cookies
 		// Set-Cookie header instructs browser to send cookie in subsequent requests
 		cookie := &http.Cookie{
@@ -204,6 +293,15 @@ func main() {
 			HttpOnly: true,
 		}
 		c.SetCookie(cookie)
+
+		// create new cookie for user id
+		cookie = &http.Cookie{
+			Name:     "user_id",
+			Value:    fmt.Sprint(user.ID),
+			HttpOnly: true,
+		}
+		c.SetCookie(cookie)
+
 		c.Response().Header().Set("HX-Location", "/kv")
 		return c.NoContent(200)
 	})
@@ -214,12 +312,11 @@ func main() {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 
-		for _, user := range registeredUsers {
-			if string(user.Token) == cookie.Value {
-				user.Token = ""
-				break
-			}
-
+		result := db.Where("token = ?", cookie.Value).Delete(&data.User{})
+		if result.Error != nil {
+			return c.Render(200, "alert_generic_error", echo.Map{
+				"Error": result.Error.Error(),
+			})
 		}
 
 		cookie = &http.Cookie{

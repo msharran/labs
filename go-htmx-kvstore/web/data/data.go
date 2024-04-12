@@ -1,16 +1,18 @@
 package data
 
+import "gorm.io/gorm"
+
 type KeyValue struct {
-	Key   string
-	Value string
+	gorm.Model
+	Key    string
+	Value  string
+	User   User
+	UserID uint
 }
 
-type KeyValues []*KeyValue
-
 type User struct {
+	gorm.Model
 	Username string
 	Password string
 	Token    string
 }
-
-type Users map[string]*User
