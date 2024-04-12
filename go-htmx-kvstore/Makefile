@@ -1,8 +1,8 @@
 build:
-	CGO_ENABLED=1 go build -o ./tmp/main .
+	CGO_ENABLED=1 go build -o ./tmp/server .
 
-run: build
-	./tmp/main
+run:
+	air
 
 fmt:
 	go fmt ./...
