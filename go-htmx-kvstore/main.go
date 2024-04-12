@@ -6,6 +6,7 @@ import (
 	mw "go-htmx-kvstore/internal/middleware"
 	"go-htmx-kvstore/web/data"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -63,7 +64,8 @@ func main() {
 		}
 
 		var kvs []data.KeyValue
-		result = db.Find(&kvs)
+		// select * from key_values where user_id = ?
+		result = db.Where("user_id = ?", user.ID).Find(&kvs)
 		if result.Error != nil {
 			c.Logger().Error(fmt.Errorf("error getting key values: %w", result.Error))
 			return c.NoContent(http.StatusInternalServerError)
@@ -92,10 +94,17 @@ func main() {
 	})
 
 	e.GET("/kv/:key/view", func(c echo.Context) error {
+		userID, err := c.Cookie("user_id")
+		if err != nil {
+			// internal server error
+			c.Logger().Error(fmt.Errorf("error getting user id: %w", err))
+			return c.NoContent(http.StatusInternalServerError)
+		}
+
 		key := c.Param("key")
 
 		var kv data.KeyValue
-		result := db.Where("key = ?", key).First(&kv)
+		result := db.Where("key = ? and user_id = ?", key, userID.Value).First(&kv)
 		if result.Error != nil {
 			c.Logger().Error(fmt.Errorf("error getting key value: %w", result.Error))
 			return c.Render(200, "alert_generic_error", echo.Map{
@@ -120,18 +129,32 @@ func main() {
 			})
 		}
 
+		userID, err := c.Cookie("user_id")
+		if err != nil {
+			// internal server error
+			c.Logger().Error(fmt.Errorf("error getting user id: %w", err))
+			return c.NoContent(http.StatusInternalServerError)
+		}
+
 		// if key exists, return error
 		var kv data.KeyValue
-		result := db.Where("key = ?", key).First(&kv)
+		result := db.Where("key = ? and user_id = ?", key, userID.Value).First(&kv)
 		if result.Error == nil {
 			return c.Render(200, "alert_kv_exists", echo.Map{
 				"Key": key,
 			})
 		}
 
+		uid, err := strconv.ParseUint(userID.Value, 10, 64)
+		if err != nil {
+			c.Logger().Error(fmt.Errorf("error converting user id to uint64: %w", err))
+			return c.NoContent(http.StatusInternalServerError)
+		}
+
 		result = db.Create(&data.KeyValue{
-			Key:   key,
-			Value: value,
+			Key:    key,
+			Value:  value,
+			UserID: uint(uid),
 		})
 		if result.Error != nil {
 			c.Logger().Error(fmt.Errorf("error creating key value: %w", result.Error))
@@ -160,22 +183,19 @@ func main() {
 			})
 		}
 
-		// update value when key == key
-		result := db.Where("key = ?", key).First(&data.KeyValue{})
-		if result.Error != nil {
-			c.Logger().Error(fmt.Errorf("error getting key value: %w", result.Error))
-			return c.Render(200, "alert_generic_error", echo.Map{
-				"Error": result.Error.Error(),
-			})
+		userID, err := c.Cookie("user_id")
+		if err != nil {
+			// internal server error
+			c.Logger().Error(fmt.Errorf("error getting user id: %w", err))
+			return c.NoContent(http.StatusInternalServerError)
 		}
 
-		result = db.Model(&data.KeyValue{}).Where("key = ?", key).Update("value", value)
+		result := db.Model(&data.KeyValue{}).Where("key = ? and user_id = ?", key, userID.Value).Update("value", value)
 		if result.Error != nil {
 			c.Logger().Error(fmt.Errorf("error updating key value: %w", result.Error))
 			return c.Render(200, "alert_generic_error", echo.Map{
 				"Error": result.Error.Error(),
 			})
-
 		}
 
 		return c.Render(200, "alert_kv_saved", echo.Map{
@@ -187,7 +207,14 @@ func main() {
 	e.DELETE("/kv/:key", func(c echo.Context) error {
 		key := c.Param("key")
 
-		result := db.Where("key = ?", key).Delete(&data.KeyValue{})
+		userID, err := c.Cookie("user_id")
+		if err != nil {
+			// internal server error
+			c.Logger().Error(fmt.Errorf("error getting user id: %w", err))
+			return c.NoContent(http.StatusInternalServerError)
+		}
+
+		result := db.Where("key = ? and user_id = ?", key, userID.Value).Delete(&data.KeyValue{})
 		if result.Error != nil {
 			c.Logger().Error(fmt.Errorf("error deleting key value: %w", result.Error))
 			return c.Render(200, "alert_generic_error", echo.Map{
@@ -307,25 +334,34 @@ func main() {
 	})
 
 	e.DELETE("/logout", func(c echo.Context) error {
-		cookie, err := c.Cookie("token")
+		tok, err := c.Cookie("token")
 		if err != nil {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 
-		result := db.Where("token = ?", cookie.Value).Delete(&data.User{})
+		result := db.Where("token = ?", tok.Value).Delete(&data.User{})
 		if result.Error != nil {
 			return c.Render(200, "alert_generic_error", echo.Map{
 				"Error": result.Error.Error(),
 			})
 		}
 
-		cookie = &http.Cookie{
+		tok = &http.Cookie{
 			Name:     "token",
 			Value:    "",
 			HttpOnly: true,
 			MaxAge:   -1,
 		}
-		c.SetCookie(cookie)
+		c.SetCookie(tok)
+
+		userID := &http.Cookie{
+			Name:     "user_id",
+			Value:    "",
+			HttpOnly: true,
+			MaxAge:   -1,
+		}
+		c.SetCookie(userID)
+
 		c.Response().Header().Set("HX-Location", "/login")
 		return c.NoContent(200)
 	})
