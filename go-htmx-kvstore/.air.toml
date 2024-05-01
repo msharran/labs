@@ -4,7 +4,7 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "./tmp/server -svr.port=9900"
+  bin = "./tmp/server -port=9900"
   cmd = "make"
   delay = 0
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]

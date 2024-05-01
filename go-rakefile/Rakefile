@@ -1,0 +1,57 @@
+bin = "bin"
+# base directory name
+name = File.basename(Dir.getwd)
+goos = ["linux", "darwin"]
+goarch = ["amd64", "arm64"]
+
+branch = `git rev-parse --abbrev-ref HEAD`.strip
+
+sed_cmd = if (/darwin/ =~ RUBY_PLATFORM) != nil then
+  'sed -i ""'
+else
+  'sed -i'
+end
+
+# default task
+task :default => [:print]
+
+desc "Print all variables"
+task :print do
+  puts "Branch: #{branch}"
+  puts "Bin: #{bin}"
+  puts "Name: #{name}"
+  puts "GOOS: #{goos}"
+  puts "GOARCH: #{goarch}"
+  puts "SED_CMD: #{sed_cmd}"
+end
+
+desc "Build for all supported OS/ARCH"
+task :build_all => [:clean, :fmt, :vet] do 
+  goos.each do |os|
+    goarch.each do |arch|
+      sh "GOOS=#{os} GOARCH=#{arch} go build -o #{bin}/#{name}-#{os}-#{arch} main.go" 
+    end
+  end 
+end
+
+desc "Build current OS"
+task :build => [:clean, :fmt, :vet] do
+  sh "go build -o #{bin}/#{name} main.go"
+end
+
+desc "Clean"
+task :clean do
+  sh "rm -rf #{bin}"
+  sh "mkdir -p #{bin}"
+end
+
+desc "Format"
+task :fmt do
+  sh "go fmt ./..."
+end
+
+desc "Vet"
+task :vet do
+  sh "go vet ./..."
+end
+

@@ -14,7 +14,7 @@ var (
 )
 
 func init() {
-	flag.IntVar(&port, "svr.port", 1323, "port to listen on")
+	flag.IntVar(&port, "port", 1323, "port to listen on")
 	flag.StringVar(&db, "db.file_name", "tmp/kvstore.sqlite3", "database file")
 }
 
