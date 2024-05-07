@@ -12,26 +12,10 @@ import (
 
 	"time"
 
-	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/lmittmann/tint"
 )
-
-type Conf struct {
-	// Port is the port the server will listen on
-	Port int `env:"PORT" envDefault:"8080"`
-
-	// Verbose enables debug logging. Only set this to true in development
-	Verbose bool `env:"VERBOSE"`
-
-	// Host is the address the server will listen on
-	// Default is empty string, which means it will listen on all interfaces
-	Host string `env:"HOST" envDefault:""`
-
-	// LogFormat can be either "production" or "development"
-	LogFormat string `env:"LOG_FORMAT" envDefault:"production"`
-}
 
 type App struct {
 	ctx    context.Context
@@ -58,7 +42,7 @@ func New() *App {
 	a.cf = cf
 	a.log = newLoggerFromConfig(cf)
 	a.ctx, a.cancel = a.newContextWithSignal()
-	a.registerRoutes()
+	a.setupRoutes()
 	return a
 }
 
@@ -67,8 +51,6 @@ func (a *App) Ctx() context.Context {
 }
 
 func (a *App) Run() {
-	addr := fmt.Sprintf("%s:%d", a.cf.Host, a.cf.Port)
-
 	a.wg.Add(1)
 	go func() {
 		defer func() {
@@ -76,14 +58,14 @@ func (a *App) Run() {
 			a.Logger().Info("server stopped")
 		}()
 
-		if err := a.e.Start(addr); err != nil && err != http.ErrServerClosed {
+		if err := a.e.Start(a.cf.Addr); err != nil && err != http.ErrServerClosed {
 			a.Logger().Error("server error", "error", err)
 			// cancel the context to signal Start() to return
 			a.cancel()
 		}
 	}()
 
-	a.Logger().Info("started server", "addr", addr)
+	a.Logger().Info("started server", "addr", a.cf.Addr)
 	<-a.ctx.Done()
 }
 
@@ -102,6 +84,13 @@ func (a *App) Shutdown(timeout time.Duration) {
 
 func (a *App) Logger() *slog.Logger {
 	return a.log
+}
+
+func (a *App) setupRoutes() {
+	// health check
+	a.e.GET("/ping", func(c echo.Context) error {
+		return c.String(http.StatusOK, "PONG")
+	})
 }
 
 func (a *App) newContextWithSignal() (context.Context, context.CancelFunc) {
@@ -124,21 +113,6 @@ func (a *App) newContextWithSignal() (context.Context, context.CancelFunc) {
 	}
 
 	return ctx, cancelFunc
-}
-
-func (a *App) registerRoutes() {
-	// health check
-	a.e.GET("/ping", func(c echo.Context) error {
-		return c.String(http.StatusOK, "PONG")
-	})
-}
-
-func newConfigFromEnv() (*Conf, error) {
-	cf := &Conf{}
-	if err := env.Parse(cf); err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
-	}
-	return cf, nil
 }
 
 func newLoggerFromConfig(cf *Conf) (l *slog.Logger) {
