@@ -12,7 +12,10 @@ type Message struct {
 	Question Question
 }
 
-func (m Message) BigEndianBytes() []byte {
+// Bytes returns the byte representation of the message.
+// The byte representation is the concatenation of the header
+// and the question in big endian byte order.
+func (m Message) Bytes() []byte {
 	h := m.Header
 	q := m.Question
 

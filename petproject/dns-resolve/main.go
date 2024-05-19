@@ -26,7 +26,7 @@ func main() {
 	}
 
 	// sort h+q in big endian byte order
-	log.Printf("DNS message (hex): %x\n", m.BigEndianBytes())
+	log.Printf("DNS message (hex): %x\n", m.Bytes())
 
 	// dial Google's public DNS server (udp)
 	// at 8.8.8.8 and port 53.
@@ -40,7 +40,7 @@ func main() {
 
 	// send the message
 	log.Printf("> Sending message to Google's public DNS server\n")
-	n, err := conn.Write(m.BigEndianBytes())
+	n, err := conn.Write(m.Bytes())
 	if err != nil {
 		log.Fatalf("> Failed to write: %v\n", err)
 	}
