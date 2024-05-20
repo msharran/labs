@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dns-resolver/internal/dns"
 	"log"
 	"net"
 )
@@ -10,23 +11,20 @@ var GoogleDNSAddr = "8.8.8.8:53"
 // https://codingchallenges.fyi/challenges/challenge-dns-resolver
 func main() {
 	// DNS header is 12 bytes (96 bits)
-	h := Header{
-		ID:      22,
-		RD:      1,
-		QDCOUNT: 1,
-	}
-	q := Question{
-		QNAME:  "dns.google.com",
-		QTYPE:  1,
-		QCLASS: 1,
-	}
-	m := Message{
-		Header:   h,
-		Question: q,
+	m := dns.Message{
+		Header: dns.Header{
+			ID:      22,
+			Flag:    dns.NewHeaderFlag(0, 0, 0, 0, 1, 0, 0, 0), // set RD (recursion desired) to 1
+			QdCount: 1,
+		},
+		Question: dns.Question{
+			QName:  "dns.google.com",
+			QType:  1,
+			QClass: 1,
+		},
 	}
 
-	// sort h+q in big endian byte order
-	log.Printf("DNS message (hex): %x\n", m.Bytes())
+	log.Printf("DNS request message: \n%s\n", m)
 
 	// dial Google's public DNS server (udp)
 	// at 8.8.8.8 and port 53.
@@ -38,9 +36,15 @@ func main() {
 	}
 	defer conn.Close()
 
-	// send the message
+	// convert message to DNS's binary format
 	log.Printf("> Sending message to Google's public DNS server\n")
-	n, err := conn.Write(m.Bytes())
+	buf, err := dns.MarshalMessage(m)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// send the message
+	n, err := conn.Write(buf)
 	if err != nil {
 		log.Fatalf("> Failed to write: %v\n", err)
 	}
@@ -48,15 +52,20 @@ func main() {
 
 	// read the response
 	log.Printf("< Reading response from Google's public DNS server\n")
-	buf := make([]byte, 1024)
+	buf = make([]byte, 1024)
 	n, err = conn.Read(buf)
 	if err != nil {
 		log.Fatalf("< Failed to read: %v", err)
 	}
 	log.Printf("< Read %d bytes\n", n)
-
 	resp := buf[:n]
-	// convert the response to a hex string
-	log.Printf("Response: %x\n", resp)
 
+	// parse the response message
+	log.Printf("Response (hex): %x\n", resp)
+	respMsg := dns.Message{}
+	if err := dns.UnmarshalMessage(resp, &respMsg); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("DNS response message: \n%s\n", respMsg)
 }
