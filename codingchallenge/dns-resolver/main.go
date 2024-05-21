@@ -62,10 +62,10 @@ func main() {
 
 	// parse the response message
 	log.Printf("Response (hex): %x\n", resp)
-	respMsg := dns.Message{}
-	if err := dns.UnmarshalMessage(resp, &respMsg); err != nil {
+	msg, err := dns.Decode(resp)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Printf("DNS response message: \n%s\n", respMsg)
+	log.Printf("DNS response (bytes=%d): \n%s\n", n, msg)
 }
