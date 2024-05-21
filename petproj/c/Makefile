@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 TARGETS = $(wildcard *.c)
 
 .PHONY: $(TARGETS)
