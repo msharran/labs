@@ -1,7 +1,7 @@
 package main
 
 import (
-	"dns-resolver/internal/dns"
+	"go-dns-resolver/internal/dns"
 	"log"
 	"net"
 )
