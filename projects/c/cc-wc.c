@@ -12,7 +12,7 @@ int get_char_c(FILE *f) {
 
 int main(int argc, char *argv[]) {
     if (argc < 3) {
-        printf("wc: missing args -- got=%d, want=%d\n", argc, 3);
+        printf("cc-wc: missing args -- got=%d, want=%d\n", argc, 3);
         fprintf(stderr,"usage: wc [-c] [file ...]\n");
         return 1;
     }
