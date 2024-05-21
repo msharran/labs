@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func MarshalMessage(m Message) ([]byte, error) {
+func Encode(m Message) ([]byte, error) {
 	h := m.Header
 	q := m.Question
 
@@ -32,7 +32,7 @@ func MarshalMessage(m Message) ([]byte, error) {
 }
 
 type decoder struct {
-	ptr  int
+	pos  int
 	hdr  *Header
 	qn   *Question
 	anss []*Answer
@@ -48,15 +48,15 @@ func (d decoder) decode(b []byte) (*Message, error) {
 		return nil, fmt.Errorf("parseQuestion error: %w", err)
 	}
 
-	err = d.parseAnswer(b)
+	err = d.parseAnswers(b)
 	if err != nil {
 		return nil, fmt.Errorf("parseAnswer error: %w", err)
 	}
 
 	return &Message{
-		Header:   *d.hdr,
-		Question: *d.qn,
-		Answer:   *d.anss[0],
+		Header:   d.hdr,
+		Question: d.qn,
+		Answers:  d.anss,
 	}, nil
 }
 
@@ -67,9 +67,9 @@ func Decode(b []byte) (*Message, error) {
 }
 
 type Message struct {
-	Header   Header
-	Question Question
-	Answer   Answer
+	Header   *Header
+	Question *Question
+	Answers  []*Answer
 }
 
 func (m Message) String() (s string) {
@@ -87,13 +87,15 @@ func (m Message) String() (s string) {
 	s += fmt.Sprintf("	QName: %s\n", q.QName)
 	s += fmt.Sprintf("	QType: %d\n", q.QType)
 	s += fmt.Sprintf("	QClass: %d\n", q.QClass)
-	s += fmt.Sprintf("Answer:\n")
-	s += fmt.Sprintf("	Name: %s\n", m.Answer.Name)
-	s += fmt.Sprintf("	Type: %d\n", m.Answer.Type)
-	s += fmt.Sprintf("	Class: %d\n", m.Answer.Class)
-	s += fmt.Sprintf("	TTL: %d\n", m.Answer.TTL)
-	s += fmt.Sprintf("	RDLength: %d\n", m.Answer.RDLength)
-	s += fmt.Sprintf("	RData: %s\n", m.Answer.RData)
+	for i, a := range m.Answers {
+		s += fmt.Sprintf("Answer: [%d]\n", i+1)
+		s += fmt.Sprintf("	Name: %s\n", a.Name)
+		s += fmt.Sprintf("	Type: %d\n", a.Type)
+		s += fmt.Sprintf("	Class: %d\n", a.Class)
+		s += fmt.Sprintf("	TTL: %d\n", a.TTL)
+		s += fmt.Sprintf("	RDLength: %d\n", a.RDLength)
+		s += fmt.Sprintf("	RData: %s\n", a.RData)
+	}
 	return s
 }
 
@@ -105,11 +107,11 @@ func (d *decoder) parseHeader(b []byte) {
 	d.hdr.AnCount = binary.BigEndian.Uint16(b[6:8])
 	d.hdr.NsCount = binary.BigEndian.Uint16(b[8:10])
 	d.hdr.ArCount = binary.BigEndian.Uint16(b[10:12])
-	d.ptr = 12
+	d.pos = 12
 }
 
 func (d *decoder) parseQuestion(b []byte) error {
-	n, ptr, err := decodeDomain(b, d.ptr)
+	n, ptr, err := decodeDomain(b, d.pos)
 	if err != nil {
 		return fmt.Errorf("parseQuestion error: %w", err)
 	}
@@ -117,24 +119,27 @@ func (d *decoder) parseQuestion(b []byte) error {
 	d.qn.QName = n
 	d.qn.QType = binary.BigEndian.Uint16(b[ptr : ptr+2])
 	d.qn.QClass = binary.BigEndian.Uint16(b[ptr+2 : ptr+4])
-	d.ptr += 4 // 2 bytes for QType and 2 bytes for QCass
+	d.pos += 4 // 2 bytes for QType and 2 bytes for QCass
 	return nil
 }
 
-func (d *decoder) parseAnswer(b []byte) error {
-	n, ptr, err := decodeDomain(b, d.ptr)
-	if err != nil {
-		return fmt.Errorf("parseAnswer error: %w", err)
+func (d *decoder) parseAnswers(b []byte) error {
+	for i := 0; i < int(d.hdr.AnCount); i++ {
+		n, pos, err := decodeDomain(b, d.pos)
+		if err != nil {
+			return fmt.Errorf("parseAnswer error: %w", err)
+		}
+		d.pos = pos
+		a := new(Answer)
+		a.Name = n
+		a.Type = binary.BigEndian.Uint16(b[d.pos : d.pos+2])
+		a.Class = binary.BigEndian.Uint16(b[d.pos+2 : d.pos+4])
+		a.TTL = binary.BigEndian.Uint32(b[d.pos+4 : d.pos+8])
+		a.RDLength = binary.BigEndian.Uint16(b[d.pos+8 : d.pos+10])
+		a.RData = b[d.pos+10 : d.pos+10+int(a.RDLength)]
+		d.pos += 10 + int(a.RDLength)
+		d.anss = append(d.anss, a)
 	}
-	d.anss = append(d.anss, new(Answer))
-	a := d.anss[0]
-	a.Name = n
-	a.Type = binary.BigEndian.Uint16(b[ptr : ptr+2])
-	a.Class = binary.BigEndian.Uint16(b[ptr+2 : ptr+4])
-	a.TTL = binary.BigEndian.Uint32(b[ptr+4 : ptr+8])
-	a.RDLength = binary.BigEndian.Uint16(b[ptr+8 : ptr+10])
-	a.RData = string(b[ptr+10 : ptr+10+int(a.RDLength)])
-	d.ptr += 10 + int(a.RDLength)
 	return nil
 }
 
@@ -193,5 +198,5 @@ type Answer struct {
 	Class    uint16
 	TTL      uint32
 	RDLength uint16
-	RData    string
+	RData    []byte
 }

@@ -12,12 +12,12 @@ var GoogleDNSAddr = "8.8.8.8:53"
 func main() {
 	// DNS header is 12 bytes (96 bits)
 	m := dns.Message{
-		Header: dns.Header{
+		Header: &dns.Header{
 			ID:      22,
 			Flag:    dns.NewHeaderFlag(0, 0, 0, 0, 1, 0, 0, 0), // set RD (recursion desired) to 1
 			QdCount: 1,
 		},
-		Question: dns.Question{
+		Question: &dns.Question{
 			QName:  "dns.google.com",
 			QType:  1,
 			QClass: 1,
@@ -38,13 +38,13 @@ func main() {
 
 	// convert message to DNS's binary format
 	log.Printf("> Sending message to Google's public DNS server\n")
-	buf, err := dns.MarshalMessage(m)
+	b, err := dns.Encode(m)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// send the message
-	n, err := conn.Write(buf)
+	n, err := conn.Write(b)
 	if err != nil {
 		log.Fatalf("> Failed to write: %v\n", err)
 	}
@@ -52,13 +52,13 @@ func main() {
 
 	// read the response
 	log.Printf("< Reading response from Google's public DNS server\n")
-	buf = make([]byte, 1024)
-	n, err = conn.Read(buf)
+	b = make([]byte, 1024)
+	n, err = conn.Read(b)
 	if err != nil {
 		log.Fatalf("< Failed to read: %v", err)
 	}
 	log.Printf("< Read %d bytes\n", n)
-	resp := buf[:n]
+	resp := b[:n]
 
 	// parse the response message
 	log.Printf("Response (hex): %x\n", resp)
