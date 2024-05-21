@@ -1,4 +1,7 @@
 ## Labs
 
-- [`learn`](./learn) - Learn / Practice / Implementations of new libraries, frameworks, languages, etc.
-- [`petproj`](./petproj) - Fully functional projects, mostly implementing problems from [CodingChallenges](https://codingchallenges.fyi/challenges/)
+- [`sandbox`](./sandbox/) - Proof of concepts, experiments, and learnings.
+- [`projects`](./projects/) - Mostly custom implementations of low level software (like dns-resolver, TCP proxy etc.,) to 
+learn how things work under the hood. Picking up challenges from,
+    - [CodingChallenges](https://codingchallenges.fyi/challenges/) - Project prefix `cc-`
+    - [Protohackers](https://protohackers.com/) - Project prefix `ph-`
