@@ -13,10 +13,13 @@ import (
 
 var (
 	flagFieldPos []string
+	flagDelim    string
 )
 
 func init() {
-	flag.StringSliceVarP(&flagFieldPos, "fields", "f", nil, "(comma separated) list of fields to select")
+	flag.StringSliceVarP(&flagFieldPos, "fields", "f", nil, `The list specifies fields, separated in the input by the field delimiter 
+	character (see the -d option).  Output fields are separated by a single occurrence of the field delimiter character`)
+	flag.StringVarP(&flagDelim, "delimiter", "d", "\t", "Use delim as the field delimiter character instead of the tab character")
 }
 
 func main() {
@@ -44,7 +47,7 @@ func run() int {
 	}
 
 	if err := scan(r, func(line string) error {
-		return cut(line, "\t")
+		return cut(line, flagDelim)
 	}); err != nil {
 		return handleErr(err)
 	}
@@ -94,7 +97,7 @@ func cut(line string, del string) error {
 		if i == len(flagFieldPos)-1 {
 			fmt.Printf("\n")
 		} else {
-			fmt.Printf("\t")
+			fmt.Printf(flagDelim)
 		}
 	}
 	return nil
