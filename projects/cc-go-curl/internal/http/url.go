@@ -1,4 +1,4 @@
-package url
+package http
 
 import (
 	"errors"
@@ -27,7 +27,7 @@ func (u *URL) PortOrDefault() string {
 	return u.Port
 }
 
-func Parse(url string) (*URL, error) {
+func ParseURL(url string) (*URL, error) {
 	scheme, rest, ok := strings.Cut(url, "://")
 	if !ok {
 		return nil, errors.New("invalid URL format")
