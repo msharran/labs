@@ -39,7 +39,7 @@ func (r *Request) Addr() string {
 func (r *Request) String() string {
 	sb := new(strings.Builder)
 
-	fmt.Fprintf(sb, "> GET %s %s%s", r.URL.Path, HttpVersion, CRLF)
+	fmt.Fprintf(sb, "> %s %s %s%s", r.Method, r.URL.Path, HttpVersion, CRLF)
 	h := r.Headers
 	for k, v := range h {
 		fmt.Fprintf(sb, "> %s: %s%s", k, v, CRLF)

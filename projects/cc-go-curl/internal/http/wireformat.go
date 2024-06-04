@@ -73,7 +73,7 @@ func readWireFormat(buf *bytes.Buffer) (*Response, error) {
 
 func writeWireFormat(req *Request) (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
-	_, err := fmt.Fprintf(buf, "GET %s %s%s", req.URL.Path, HttpVersion, CRLF)
+	_, err := fmt.Fprintf(buf, "%s %s %s%s", req.Method, req.URL.Path, HttpVersion, CRLF)
 	if err != nil {
 		return nil, err
 	}

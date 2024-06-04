@@ -11,13 +11,14 @@ import (
 )
 
 var (
-	fverbose = pflag.BoolP("verbose", "v", false, "Make the operation more talkative")
+	flagVerbose = pflag.BoolP("verbose", "v", false, "Make the operation more talkative")
+	flagMethod  = pflag.StringP("request", "X", "GET", "Request method to use")
 )
 
 func main() {
 	pflag.Parse()
 	log.SetFlags(0)
-	if !*fverbose {
+	if !*flagVerbose {
 		log.SetOutput(io.Discard)
 	}
 	run()
@@ -34,7 +35,7 @@ func run() {
 		log.Fatalf("parse error: %v", err)
 	}
 
-	req := http.NewRequest("GET", url, nil)
+	req := http.NewRequest(*flagMethod, url, nil)
 
 	resp, err := http.Do(req)
 	if err != nil {
