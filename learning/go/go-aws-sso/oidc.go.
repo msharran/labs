@@ -1,0 +1,238 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/sso"
+	"github.com/aws/aws-sdk-go-v2/service/ssooidc"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/pkg/browser"
+)
+
+func SSOConfig(debug bool) (*aws.Config, error) {
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithSharedConfigProfile("nfdev"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	sharedConfig := getSharedConfig(&cfg)
+	validateSharedConfig(sharedConfig)
+
+	reauthenticate := false
+
+	staticCredentials, err := loadExistingCredentials()
+	if err != nil {
+		reauthenticate = true
+	}
+
+	if !reauthenticate {
+		credsProvider := credentials.StaticCredentialsProvider{
+			Value: staticCredentials,
+		}
+
+		cfg.Credentials = credsProvider
+
+		if !checkExistingCredentials(&cfg) {
+			reauthenticate = true
+		}
+	}
+
+	if reauthenticate {
+		err = reloginWorkflow(&cfg, debug)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
+
+	return &cfg, nil
+
+}
+
+func checkExistingCredentials(cfg *aws.Config) bool {
+	client := sts.NewFromConfig(*cfg)
+
+	_, err := client.GetCallerIdentity(
+		context.TODO(),
+		&sts.GetCallerIdentityInput{},
+	)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+func loadExistingCredentials() (aws.Credentials, error) {
+	var staticCredentials aws.Credentials
+
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	credentialsRaw, err := os.ReadFile(dirname + "/.aws/nfdev")
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return staticCredentials, err
+		} else {
+			log.Fatal(err)
+			return staticCredentials, err
+		}
+	} else {
+		err = json.Unmarshal(credentialsRaw, &staticCredentials)
+		return staticCredentials, err
+	}
+}
+
+func getSharedConfig(cfg *aws.Config) (sharedConfig *config.SharedConfig, err error) {
+	cfgSources := cfg.ConfigSources
+	var found bool
+	for _, cfgSource := range cfgSources {
+		foundSharedConfig, ok := cfgSource.(config.SharedConfig)
+		if ok {
+			sharedConfig = &foundSharedConfig
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return nil, errors.New("SharedConfig not found")
+	}
+
+	return sharedConfig, nil
+}
+
+func validateSharedConfig(sharedConfig config.SharedConfig) {
+	if sharedConfig.SSOStartURL == "" {
+		fmt.Println("ERROR: SSOStartURL not found or empty")
+		os.Exit(1)
+	}
+
+	if sharedConfig.SSOAccountID == "" {
+		fmt.Println("ERROR: SSOAccountID not found or empty")
+		os.Exit(1)
+	}
+
+	if sharedConfig.SSORoleName == "" {
+		fmt.Println("ERROR: SSORoleName not found or empty")
+		os.Exit(1)
+	}
+}
+
+func reloginWorkflow(cfg *aws.Config, debug bool) error {
+	// create sso oidc client to trigger login flow
+	ssooidcClient := ssooidc.NewFromConfig(*cfg)
+
+	// register your client which is triggering the login flow
+	register, err := ssooidcClient.RegisterClient(context.TODO(), &ssooidc.RegisterClientInput{
+		ClientName: aws.String("sample-client-name"),
+		ClientType: aws.String("public"),
+		Scopes:     []string{"sso-portal:*"},
+	})
+	if err != nil {
+		return err
+	}
+
+	sharedConfig, err := getSharedConfig(cfg)
+	if err != nil {
+		return err
+	}
+
+	// authorize your device using the client registration response
+	deviceAuth, err := ssooidcClient.StartDeviceAuthorization(context.TODO(), &ssooidc.StartDeviceAuthorizationInput{
+		ClientId:     register.ClientId,
+		ClientSecret: register.ClientSecret,
+		StartUrl:     &sharedConfig.SSOStartURL,
+	})
+	if err != nil {
+		return err
+	}
+	// trigger OIDC login. open browser to login. close tab once login is done. press enter to continue
+	url := aws.ToString(deviceAuth.VerificationUriComplete)
+	fmt.Printf("If browser is not opened automatically, please open link:\n%v\n", url)
+	err = browser.OpenURL(url)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	fmt.Println("Press ENTER key once login is done")
+	_ = bufio.NewScanner(os.Stdin).Scan()
+	// generate sso token
+	token, err := ssooidcClient.CreateToken(context.TODO(), &ssooidc.CreateTokenInput{
+		ClientId:     register.ClientId,
+		ClientSecret: register.ClientSecret,
+		DeviceCode:   deviceAuth.DeviceCode,
+		GrantType:    aws.String("urn:ietf:params:oauth:grant-type:device_code"),
+	})
+	if err != nil {
+		return err
+	}
+	// create sso client
+	ssoClient := sso.NewFromConfig(*cfg)
+
+	// exchange token received during oidc flow to fetch actual aws access keys
+	creds, err := ssoClient.GetRoleCredentials(context.TODO(), &sso.GetRoleCredentialsInput{
+		AccessToken: token.AccessToken,
+		AccountId:   &sharedConfig.SSOAccountID,
+		RoleName:    &sharedConfig.SSORoleName,
+	})
+	if err != nil {
+		return err
+	}
+
+	if debug {
+		// printing access key to show how they are accessed
+		fmt.Printf("\n\nPriting aws access keysz")
+		fmt.Println("Access key id: ", aws.ToString(creds.RoleCredentials.AccessKeyId))
+		fmt.Println("Secret access key: ", aws.ToString(creds.RoleCredentials.SecretAccessKey))
+		fmt.Println("Expiration: ", aws.ToInt64(&creds.RoleCredentials.Expiration))
+		fmt.Println("Session token: ", aws.ToString(creds.RoleCredentials.SessionToken))
+		fmt.Printf("\n----------------------------------------------\n\n")
+	}
+
+	staticCredentials := aws.Credentials{
+		AccessKeyID:     aws.ToString(creds.RoleCredentials.AccessKeyId),
+		SecretAccessKey: aws.ToString(creds.RoleCredentials.SecretAccessKey),
+		SessionToken:    aws.ToString(creds.RoleCredentials.SessionToken),
+		Expires:         time.UnixMilli(aws.ToInt64(&creds.RoleCredentials.Expiration)),
+		CanExpire:       true,
+	}
+
+	u, err := json.Marshal(staticCredentials)
+	if err != nil {
+		return err
+	}
+
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(dirname+"/.aws/nfdev", u, 0775)
+	if err != nil {
+		return err
+	}
+
+	credsProvider := credentials.StaticCredentialsProvider{
+		Value: staticCredentials,
+	}
+
+	cfg.Credentials = credsProvider
+
+	return nil
+}
