@@ -1,0 +1,1 @@
+orb create -a amd64 -u msharran -c /tmp/cloud-init.yaml fedora cloud-init

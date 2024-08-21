@@ -1,0 +1,7 @@
+packages:
+  - bat
+
+write_files:
+  - content: |
+      it works!
+    path: /etc/cloud-init-test.txt

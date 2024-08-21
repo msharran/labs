@@ -1,17 +1,12 @@
 fn main() {
-    greet();
+    let seconds = Seconds(60);
+    let minutes = Minutes(1);
+    // let seconds = seconds.into(minutes);
+    // println!("{} seconds", seconds.0);
 }
 
-fn basic_datatypes() {
-    let i1 = 1;
-    let i2 = i1;
+struct Seconds(u32);
 
-    println!("{}", i1);
-}
+struct Minutes(u32);
 
-fn greet() {
-    let name = String::from("Sharran");
-    let n = name.clone();
-    println!("inner name, {} {:p}", &name, &name);
-    println!("inner n, {} {:p}", &n, &n);
-}
+impl Fr 
