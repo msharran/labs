@@ -14,7 +14,6 @@ fn main() {
     args[1..].iter().for_each(|f|{
         // Create a path to the desired file
         let path = Path::new(&f);
-
         // Open the path in read-only mode, returns `io::Result<File>`
         let mut file = match File::open(&path) {
             Err(why) => fatal(format!("couldn't open {}: {}", path.display(), why).as_str()),
