@@ -1,7 +1,12 @@
 packages:
+  - git
   - bat
+  - fzf
 
 write_files:
   - content: |
       it works!
     path: /etc/cloud-init-test.txt
+
+runcmd:
+  - curl https://sh.rustup.rs -sSf | sh
