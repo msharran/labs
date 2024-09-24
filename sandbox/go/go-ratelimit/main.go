@@ -46,10 +46,10 @@ func deleteOldDirs(root string, olderThan time.Duration) error {
 
 	var wg sync.WaitGroup
 	const concurrentLimit = 30
-	limiter := make(chan struct{}, concurrentLimit)
+	sem := make(chan struct{}, concurrentLimit)
 
 	for _, dir := range directories {
-		limiter <- struct{}{}
+		sem <- struct{}{}
 		wg.Add(1)
 
 		// recreate loop variable before passing
@@ -59,7 +59,7 @@ func deleteOldDirs(root string, olderThan time.Duration) error {
 			defer wg.Done()
 			defer func() {
 				// release the limiter
-				<-limiter
+				<-sem
 			}()
 			err := actualDelete(dir, olderThan)
 			if err != nil {
