@@ -1,5 +1,6 @@
 pub mod http;
 use http::{HttpRequest, HttpResponse};
+use log::info;
 use std::{collections::HashMap, fs, net::TcpStream};
 
 pub struct TcpConnManager<'a> {
@@ -13,12 +14,13 @@ impl<'a> TcpConnManager<'a> {
         let index_content =
             fs::read_to_string("www/index.html").expect("Unable to read index.html");
         html_files.insert("index.html".to_string(), index_content);
+        info!("index.html loaded");
 
         Self { stream, html_files }
     }
 
     pub fn handle_connection(&mut self) {
-        println!("HTTP Stream accepted");
+        info!("Handling connection");
 
         let http_request = match HttpRequest::from(&mut self.stream) {
             Ok(req) => req,
@@ -27,8 +29,6 @@ impl<'a> TcpConnManager<'a> {
                 return;
             }
         };
-
-        println!("{http_request:?}");
 
         let response = match http_request.uri.as_str() {
             "/" | "/index.html" => {
@@ -43,6 +43,6 @@ impl<'a> TcpConnManager<'a> {
         };
 
         response.write_all(self.stream);
-        println!("HTTP Stream closed");
+        info!("{} {} {}", http_request.method, http_request.uri, response.status_code);
     }
 }

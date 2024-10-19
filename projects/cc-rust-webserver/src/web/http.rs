@@ -5,7 +5,7 @@ use std::{
 
 pub struct HttpResponse {
     version: String,
-    status_code: usize,
+    pub status_code: usize,
     status: String,
     body: String,
 }
