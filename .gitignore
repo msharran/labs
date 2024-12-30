@@ -1,2 +1,4 @@
 .terraform*
 target
+zig-out
+.zig-cache

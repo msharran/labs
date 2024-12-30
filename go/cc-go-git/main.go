@@ -23,6 +23,7 @@ func main() {
 		Commands: []*cli.Command{
 			initCmd(),
 			hashObjectCmd(),
+			catFileCmd(),
 		},
 	}
 
