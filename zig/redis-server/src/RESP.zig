@@ -29,6 +29,7 @@ pub const DataType = enum {
             '-' => DataType.Error,
             ':' => DataType.Integer,
             '$' => DataType.BulkString,
+            else => return error.InvalidDataType,
         };
     }
 };
@@ -89,7 +90,7 @@ pub fn deserialise(raw: []u8) !Message {
     }
 }
 
-fn serialise(allocator: std.mem.Allocator, m: Message) ![]u8 {
+pub fn serialise(allocator: std.mem.Allocator, m: Message) ![]u8 {
     const data_type = try m.data_type.to_string();
     const content = m.content;
 

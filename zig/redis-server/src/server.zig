@@ -17,6 +17,11 @@ pub fn listen_and_serve(address: std.net.Address) !void {
 
     std.debug.print("Server listening on {}\n", .{address});
 
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer {
+        _ = gpa.deinit();
+    }
+
     var buf: [1024]u8 = undefined;
     while (true) {
         var client_address: net.Address = undefined;
@@ -46,7 +51,14 @@ pub fn listen_and_serve(address: std.net.Address) !void {
 
         std.debug.print("request data_type: {}\n", .{msg.data_type});
 
-        write_all(socket, msg.content) catch |err| {
+        const allocator = gpa.allocator();
+        const msg_serialised = resp.serialise(allocator, msg) catch |err| {
+            std.debug.print("error serialising: {}\n", .{err});
+            continue;
+        };
+        defer allocator.free(msg_serialised);
+
+        write_all(socket, msg_serialised) catch |err| {
             std.debug.print("error writing: {}\n", .{err});
         };
     }
@@ -66,7 +78,7 @@ fn write_all(socket: posix.socket_t, msg: []const u8) !void {
 fn read_all(socket: posix.socket_t, buf: []u8) !usize {
     var pos: usize = 0;
     while (pos < buf.len) {
-        const read = try posix.read(socket, &buf[pos..]);
+        const read = try posix.read(socket, buf[pos..]);
         if (read == 0) { // 0 means EOF
             return pos;
         }
