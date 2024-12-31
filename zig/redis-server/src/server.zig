@@ -3,6 +3,8 @@ const net = std.net;
 const posix = std.posix;
 const resp = @import("RESP.zig");
 
+const ServeMux = struct {};
+
 pub fn listen_and_serve(address: std.net.Address) !void {
     const tpe: u32 = posix.SOCK.STREAM;
     const protocol = posix.IPPROTO.TCP;
@@ -28,7 +30,7 @@ pub fn listen_and_serve(address: std.net.Address) !void {
 
         std.debug.print("client {} connected\n", .{client_address});
 
-        const read = posix.read(socket, &buf) catch |err| {
+        const read = read_all(socket, &buf) catch |err| {
             std.debug.print("error reading: {}\n", .{err});
             continue;
         };
@@ -37,20 +39,20 @@ pub fn listen_and_serve(address: std.net.Address) !void {
             continue;
         }
 
-        const msg = resp.serialise(buf[0..read]) catch |err| {
+        const msg = resp.deserialise(buf[0..read]) catch |err| {
             std.debug.print("error serialising: {}\n", .{err});
             continue;
         };
 
         std.debug.print("request data_type: {}\n", .{msg.data_type});
 
-        write(socket, msg.content) catch |err| {
+        write_all(socket, msg.content) catch |err| {
             std.debug.print("error writing: {}\n", .{err});
         };
     }
 }
 
-fn write(socket: posix.socket_t, msg: []const u8) !void {
+fn write_all(socket: posix.socket_t, msg: []const u8) !void {
     var pos: usize = 0;
     while (pos < msg.len) {
         const written = try posix.write(socket, msg[pos..]);
@@ -59,4 +61,16 @@ fn write(socket: posix.socket_t, msg: []const u8) !void {
         }
         pos += written;
     }
+}
+
+fn read_all(socket: posix.socket_t, buf: []u8) !usize {
+    var pos: usize = 0;
+    while (pos < buf.len) {
+        const read = try posix.read(socket, &buf[pos..]);
+        if (read == 0) { // 0 means EOF
+            return pos;
+        }
+        pos += read;
+    }
+    return pos;
 }
