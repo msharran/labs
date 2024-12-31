@@ -113,6 +113,7 @@ test "serialise simple string" {
     const allocator = std.heap.page_allocator;
     const m = Message{ .data_type = DataType.SimpleString, .content = "hello" };
     const got = try serialise(allocator, m);
+    defer allocator.free(got);
     const want = "+hello\\r\\n";
     try std.testing.expectEqualStrings(got, want);
 }
@@ -121,6 +122,7 @@ test "serialise error" {
     const allocator = std.heap.page_allocator;
     const m = Message{ .data_type = DataType.Error, .content = "error" };
     const got = try serialise(allocator, m);
+    defer allocator.free(got);
     const want = "-error\\r\\n";
     try std.testing.expectEqualStrings(got, want);
 }
@@ -129,6 +131,7 @@ test "serialise integer" {
     const allocator = std.heap.page_allocator;
     const m = Message{ .data_type = DataType.Integer, .content = "123" };
     const got = try serialise(allocator, m);
+    defer allocator.free(got);
     const want = ":123\\r\\n";
     try std.testing.expectEqualStrings(got, want);
 }
