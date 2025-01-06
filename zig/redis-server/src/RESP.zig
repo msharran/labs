@@ -51,7 +51,11 @@ pub const DataType = enum {
 
 arena: *std.heap.ArenaAllocator,
 
-pub const Message = struct { type: DataType, value_raw: ?[]const u8 = null, next: ?*Message = null };
+pub const Message = struct {
+    type: DataType,
+    value_raw: ?[]const u8 = null,
+    next: ?*Message = null,
+};
 
 pub fn deserialise(self: @This(), raw: []const u8) !Message {
     if (raw.len == 0) {
@@ -88,22 +92,35 @@ pub fn deserialise(self: @This(), raw: []const u8) !Message {
             return Message{ .type = data_type, .value_raw = string_part };
         },
         DataType.Array => {
-            const msg = try self.toOwnedMessages(raw);
-            debug.print("commands: {s}\n", .{msg});
-            // var msg = Message{ .type = DataType.Array };
-            // for (messages) |cmd| {
-            // debug.print("cmd: {s}\n", .{cmd});
-            // var m = try deserialise(cmd);
-            // msg.next = &m;
-            // msg = m;
-            // }
+            const raw_msgs = try self.toOwnedMessages(raw);
 
-            return error.UnsupportedDataType;
+            var head = Message{ .type = DataType.Array };
+
+            for (raw_msgs) |raw_msg| {
+                var msg = try self.deserialise(raw_msg);
+                debug.print(":: msg {?}\n", .{msg});
+                debug.print(":: msgptr {?}\n", .{&msg});
+                if (head.next == null) {
+                    head.next = &msg;
+                    debug.print(":: head {?}\n", .{head});
+                } else {
+                    var tail = head;
+                    while (tail.next != null) {
+                        tail = tail.next.?.*;
+                    }
+                    tail.next = &msg;
+                    debug.print(":: tail {?}\n", .{tail});
+                }
+            }
+
+            // print head and tail
+            debug.print(":: head {?}\n", .{head});
+            return error.Unimplemented;
         },
     }
 }
 
-/// mergeItemParts merges parts of items in an array
+/// merges merges parts of items in an array
 /// into a single item
 /// e.g. "*2\r\n$4\r\nECHO\r\n$5\r\nhello\r\n"
 /// item 1: "$4\r\nECHO\r\n" => "ECHO\r\n"
@@ -152,7 +169,6 @@ fn toOwnedMessages(self: @This(), raw: []const u8) ![][]u8 {
         return error.ArrayLengthMismatch;
     }
     const s = try commands.toOwnedSlice();
-    debug.print("commands: {s}\n", .{s});
     return s;
 }
 
@@ -222,7 +238,7 @@ test "deserialise first bulk_string" {
 }
 
 test "deserialise array" {
-    const raw = "*3\\r\\n$4\\r\\nECHO\\r\\n$5\\r\\nhello\\r\\n$4\\r\\nPING\\r\\n";
+    const raw = "*3\\r\\n$4\\r\\nECHO\\r\\n$5\\r\\nhello\\r\\n:123\\r\\n";
 
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
@@ -234,12 +250,14 @@ test "deserialise array" {
     try std.testing.expect(got.value_raw == null);
     try std.testing.expect(got.next != null);
 
-    // test first child
-    // var child = got.next;
-    // try std.testing.expectEqual(DataType.BulkString, child.?.type);
-    // try std.testing.expect(child.?.value_raw != null);
-    // debug.print("child: {?}\n", .{child});
+    // print all the children
+    var head = got;
+    while (head.next != null) {
+        debug.print("{} <> {?s} <> {?} ::::\n", .{ head.type, head.value_raw, head.next });
+        head = head.next.?.*;
+    }
 
-    // test second child
-    // child = child.?.next;
+    // test first child
+    // try std.testing.expectEqual(got.next.?.type, DataType.BulkString);
+    // try std.testing.expectEqualStrings(got.next.?.value_raw.?, "ECHO");
 }
