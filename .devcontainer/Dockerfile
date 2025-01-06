@@ -17,6 +17,11 @@ RUN cd /opt \
 # Ref: https://github.com/neovim/neovim/blob/master/BUILD.md
 RUN cd /opt \
     && apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && sudo apt-get install ninja-build gettext cmake unzip curl build-essential
+    && apt-get -y install ninja-build gettext cmake unzip curl build-essential \
+    && git clone https://github.com/neovim/neovim \
+    && cd neovim \
+    && make CMAKE_BUILD_TYPE=Release \
+    && ln -s /opt/neovim/build/bin/nvim /usr/local/bin/nvim \
+    && nvim --version
 
 WORKDIR /workspace
