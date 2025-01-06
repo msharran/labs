@@ -2,3 +2,5 @@
 target
 zig-out
 .zig-cache
+.ruby-lsp
+.DS_Store
