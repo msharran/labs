@@ -1,0 +1,12 @@
+{
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "forwardPorts": [
+        3000
+    ],
+    "features": {
+        "ghcr.io/devcontainers/features/rust:1": {},
+        "ghcr.io/devcontainers/features/go:1": {}
+    }
+}
