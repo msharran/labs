@@ -1,5 +1,6 @@
 const std = @import("std");
 const debug = std.debug;
+const assert = debug.assert;
 
 const Resp = @This();
 
@@ -53,18 +54,30 @@ pub const DataType = enum {
 
 arena: *std.heap.ArenaAllocator,
 
+pub fn init(arena: *std.heap.ArenaAllocator) Resp {
+    return Resp{ .arena = arena };
+}
+
+pub const ValueTag = enum {
+    list,
+    single,
+};
+
+pub const Value = union(ValueTag) {
+    list: std.ArrayList(Message),
+    single: []const u8,
+};
+
 pub const Message = struct {
     type: DataType,
-    value: ?[]const u8 = null,
-    next: ?*Message = null,
+    value: Value,
 
-    pub fn init(t: DataType, v: ?[]const u8, m: ?*Message) Message {
-        return Message{ .type = t, .value = v, .next = m };
+    pub fn init(t: DataType, v: []const u8) Message {
+        return Message{ .type = t, .value = Value{ .single = v } };
     }
 
-    pub fn insertTop(self: *Message, m: *Message) void {
-        m.next = self.next;
-        self.next = m;
+    pub fn initList(t: DataType, v: std.ArrayList(Message)) Message {
+        return Message{ .type = t, .value = Value{ .list = v } };
     }
 };
 
@@ -81,7 +94,7 @@ pub fn deserialise(self: Resp, raw: []const u8) !Message {
             if (!std.mem.eql(u8, last_2_bytes, CRLF)) {
                 return error.InvalidTerminator_ShouldBeCRLF;
             }
-            return Message{ .type = data_type, .value = value };
+            return Message.init(data_type, value);
         },
         DataType.BulkString => {
             var parts = std.mem.splitSequence(u8, raw, CRLF);
@@ -100,36 +113,20 @@ pub fn deserialise(self: Resp, raw: []const u8) !Message {
                 return error.ContentLengthMismatch;
             }
 
-            return Message{ .type = data_type, .value = string_part };
+            return Message.init(data_type, string_part);
         },
         DataType.Array => {
             const raw_msgs = try self.toOwnedMessages(raw);
 
-            var head = Message.init(DataType.Array, null, null);
+            // init an array list of messages
+            var list = std.ArrayList(Message).init(self.arena.allocator());
 
-            // reverse loop through the array
-            var i: usize = 0;
-            const len = raw_msgs.len;
-            while (i < len) : (i += 1) {
-                const index = len - 1 - i;
-                var msg = try self.deserialise(raw_msgs[index]);
-                // TODO: fix this
-                head.insertTop(&msg);
+            for (raw_msgs) |msg| {
+                const m = try self.deserialise(msg);
+                try list.append(m);
             }
 
-            var h: ?*Message = &head;
-            var count: usize = 0;
-            while (h) |m| {
-                if (count == 5) {
-                    debug.print("breaking\n", .{});
-                    break;
-                }
-                debug.print("{} {?s}\n", .{ m.type, m.value });
-                h = m.next;
-                count += 1;
-            }
-
-            return error.Unimplemented;
+            return Message.initList(data_type, list);
         },
     }
 }
@@ -260,18 +257,13 @@ test "deserialise array" {
     const resp = Resp{ .arena = &arena };
     const got = try resp.deserialise(raw);
 
-    try std.testing.expectEqual(DataType.Array, got.type);
-    try std.testing.expect(got.value == null);
-    try std.testing.expect(got.next != null);
-
-    // print all the children
-    var head = got;
-    while (head.next != null) {
-        debug.print("{} <> {?s} <> {?} ::::\n", .{ head.type, head.value, head.next });
-        head = head.next.?.*;
-    }
-
-    // test first child
-    // try std.testing.expectEqual(got.next.?.type, DataType.BulkString);
-    // try std.testing.expectEqualStrings(got.next.?.value_raw.?, "ECHO");
+    assert(got.type == DataType.Array);
+    assert(got.value.list.items.len == 3);
+    assert(got.value.list.items[0].type == DataType.BulkString);
+    const gotval0 = got.value.list.items[0].value.single;
+    try std.testing.expectEqualStrings("ECHO", gotval0);
+    assert(got.value.list.items[1].type == DataType.BulkString);
+    try std.testing.expectEqualStrings(got.value.list.items[1].value.single, "hello");
+    assert(got.value.list.items[2].type == DataType.Integer);
+    try std.testing.expectEqualStrings(got.value.list.items[2].value.single, "123");
 }

@@ -15,7 +15,7 @@ const User = struct {
     }
 };
 
-test "user" {
+test "user manual insertion" {
     var user = User.init("pedro");
     var user2 = User.init("juan");
     var user3 = User.init("pablo");
@@ -33,6 +33,30 @@ test "user" {
     // print all users
 
     var u: ?*User = &user;
+
+    while (u) |next| {
+        try stdout.print("{s}\n", .{next.name});
+        u = next.next;
+    }
+}
+
+test "user insertion from a while loop" {
+    const users = [_]User{ User.init("pedro"), User.init("juan"), User.init("pablo") };
+
+    var head: ?*User = null;
+    var prev: ?*User = null;
+
+    var i: usize = 0;
+    while (i < users.len) : (i += 1) {
+        if (head == null) {
+            head = &users[i];
+        } else {
+            prev.?.*.insertTop(&users[i]);
+        }
+        prev = &users[i];
+    }
+
+    var u: ?*User = head;
 
     while (u) |next| {
         try stdout.print("{s}\n", .{next.name});
