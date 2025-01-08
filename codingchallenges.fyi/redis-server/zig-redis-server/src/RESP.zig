@@ -1,6 +1,8 @@
 const std = @import("std");
 const debug = std.debug;
 
+const Resp = @This();
+
 const CRLF: []const u8 = "\\r\\n";
 const CRLF_LEN: usize = CRLF.len;
 comptime {
@@ -53,11 +55,20 @@ arena: *std.heap.ArenaAllocator,
 
 pub const Message = struct {
     type: DataType,
-    value_raw: ?[]const u8 = null,
+    value: ?[]const u8 = null,
     next: ?*Message = null,
+
+    pub fn init(t: DataType, v: ?[]const u8, m: ?*Message) Message {
+        return Message{ .type = t, .value = v, .next = m };
+    }
+
+    pub fn insertTop(self: *Message, m: *Message) void {
+        m.next = self.next;
+        self.next = m;
+    }
 };
 
-pub fn deserialise(self: @This(), raw: []const u8) !Message {
+pub fn deserialise(self: Resp, raw: []const u8) !Message {
     if (raw.len == 0) {
         return error.EmptyRequest;
     }
@@ -70,7 +81,7 @@ pub fn deserialise(self: @This(), raw: []const u8) !Message {
             if (!std.mem.eql(u8, last_2_bytes, CRLF)) {
                 return error.InvalidTerminator_ShouldBeCRLF;
             }
-            return Message{ .type = data_type, .value_raw = value };
+            return Message{ .type = data_type, .value = value };
         },
         DataType.BulkString => {
             var parts = std.mem.splitSequence(u8, raw, CRLF);
@@ -89,32 +100,35 @@ pub fn deserialise(self: @This(), raw: []const u8) !Message {
                 return error.ContentLengthMismatch;
             }
 
-            return Message{ .type = data_type, .value_raw = string_part };
+            return Message{ .type = data_type, .value = string_part };
         },
         DataType.Array => {
             const raw_msgs = try self.toOwnedMessages(raw);
 
-            var head = Message{ .type = DataType.Array };
+            var head = Message.init(DataType.Array, null, null);
 
-            for (raw_msgs) |raw_msg| {
-                var msg = try self.deserialise(raw_msg);
-                debug.print(":: msg {?}\n", .{msg});
-                debug.print(":: msgptr {?}\n", .{&msg});
-                if (head.next == null) {
-                    head.next = &msg;
-                    debug.print(":: head {?}\n", .{head});
-                } else {
-                    var tail = head;
-                    while (tail.next != null) {
-                        tail = tail.next.?.*;
-                    }
-                    tail.next = &msg;
-                    debug.print(":: tail {?}\n", .{tail});
-                }
+            // reverse loop through the array
+            var i: usize = 0;
+            const len = raw_msgs.len;
+            while (i < len) : (i += 1) {
+                const index = len - 1 - i;
+                var msg = try self.deserialise(raw_msgs[index]);
+                // TODO: fix this
+                head.insertTop(&msg);
             }
 
-            // print head and tail
-            debug.print(":: head {?}\n", .{head});
+            var h: ?*Message = &head;
+            var count: usize = 0;
+            while (h) |m| {
+                if (count == 5) {
+                    debug.print("breaking\n", .{});
+                    break;
+                }
+                debug.print("{} {?s}\n", .{ m.type, m.value });
+                h = m.next;
+                count += 1;
+            }
+
             return error.Unimplemented;
         },
     }
@@ -125,7 +139,7 @@ pub fn deserialise(self: @This(), raw: []const u8) !Message {
 /// e.g. "*2\r\n$4\r\nECHO\r\n$5\r\nhello\r\n"
 /// item 1: "$4\r\nECHO\r\n" => "ECHO\r\n"
 /// item 2: "$5\r\nhello\r\n" => "hello\r\n"
-fn toOwnedMessages(self: @This(), raw: []const u8) ![][]u8 {
+fn toOwnedMessages(self: Resp, raw: []const u8) ![][]u8 {
     var parts = std.mem.splitSequence(u8, raw, CRLF);
     const arrlenbytes = parts.first();
     if (arrlenbytes.len != 2) {
@@ -174,7 +188,7 @@ fn toOwnedMessages(self: @This(), raw: []const u8) ![][]u8 {
 
 pub fn serialise(allocator: std.mem.Allocator, m: Message) ![]u8 {
     const data_type = try m.type.toChar();
-    const content = m.value_raw;
+    const content = m.value;
 
     var buf: []u8 = undefined;
     switch (m.type) {
@@ -194,7 +208,7 @@ pub fn serialise(allocator: std.mem.Allocator, m: Message) ![]u8 {
 
 test "serialise simple string" {
     const allocator = std.heap.page_allocator;
-    const m = Message{ .type = DataType.SimpleString, .value_raw = "hello" };
+    const m = Message{ .type = DataType.SimpleString, .value = "hello" };
     const got = try serialise(allocator, m);
     defer allocator.free(got);
     const want = "+hello\\r\\n";
@@ -203,7 +217,7 @@ test "serialise simple string" {
 
 test "serialise error" {
     const allocator = std.heap.page_allocator;
-    const m = Message{ .type = DataType.Error, .value_raw = "error" };
+    const m = Message{ .type = DataType.Error, .value = "error" };
     const got = try serialise(allocator, m);
     defer allocator.free(got);
     const want = "-error\\r\\n";
@@ -212,7 +226,7 @@ test "serialise error" {
 
 test "serialise integer" {
     const allocator = std.heap.page_allocator;
-    const m = Message{ .type = DataType.Integer, .value_raw = "123" };
+    const m = Message{ .type = DataType.Integer, .value = "123" };
     const got = try serialise(allocator, m);
     defer allocator.free(got);
     const want = ":123\\r\\n";
@@ -222,9 +236,9 @@ test "serialise integer" {
 test "deserialise bulk_string" {
     const raw = "$4\\r\\nECHO\\r\\n";
     const got = try deserialise(raw);
-    const want = Message{ .type = DataType.BulkString, .value_raw = "ECHO" };
+    const want = Message{ .type = DataType.BulkString, .value = "ECHO" };
 
-    try std.testing.expectEqualStrings(got.value_raw, want.value_raw);
+    try std.testing.expectEqualStrings(got.value, want.value);
 }
 
 test "deserialise first bulk_string" {
@@ -232,9 +246,9 @@ test "deserialise first bulk_string" {
     const got = try deserialise(raw);
 
     // should only deserialise the first bulk string
-    const want = Message{ .type = DataType.BulkString, .value_raw = "ECHO" };
+    const want = Message{ .type = DataType.BulkString, .value = "ECHO" };
 
-    try std.testing.expectEqualStrings(got.value_raw, want.value_raw);
+    try std.testing.expectEqualStrings(got.value, want.value);
 }
 
 test "deserialise array" {
@@ -243,17 +257,17 @@ test "deserialise array" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
 
-    const resp = @This(){ .arena = &arena };
+    const resp = Resp{ .arena = &arena };
     const got = try resp.deserialise(raw);
 
     try std.testing.expectEqual(DataType.Array, got.type);
-    try std.testing.expect(got.value_raw == null);
+    try std.testing.expect(got.value == null);
     try std.testing.expect(got.next != null);
 
     // print all the children
     var head = got;
     while (head.next != null) {
-        debug.print("{} <> {?s} <> {?} ::::\n", .{ head.type, head.value_raw, head.next });
+        debug.print("{} <> {?s} <> {?} ::::\n", .{ head.type, head.value, head.next });
         head = head.next.?.*;
     }
 
