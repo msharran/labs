@@ -2,7 +2,7 @@ const std = @import("std");
 const debug = std.debug;
 const assert = debug.assert;
 
-const Resp = @This();
+const Proto = @This();
 
 const CRLF: []const u8 = "\\r\\n";
 const CRLF_LEN: usize = CRLF.len;
@@ -11,10 +11,11 @@ comptime {
     std.debug.assert(CRLF_LEN == 4);
 }
 
-pub const Command = enum {
-    Ping,
-    Echo,
-};
+arena: *std.heap.ArenaAllocator,
+
+pub fn init(arena: *std.heap.ArenaAllocator) Proto {
+    return Proto{ .arena = arena };
+}
 
 pub const DataType = enum {
     SimpleString,
@@ -52,12 +53,6 @@ pub const DataType = enum {
     }
 };
 
-arena: *std.heap.ArenaAllocator,
-
-pub fn init(arena: *std.heap.ArenaAllocator) Resp {
-    return Resp{ .arena = arena };
-}
-
 pub const ValueTag = enum {
     list,
     single,
@@ -81,7 +76,7 @@ pub const Message = struct {
     }
 };
 
-pub fn deserialise(self: Resp, raw: []const u8) !Message {
+pub fn deserialise(self: Proto, raw: []const u8) !Message {
     if (raw.len == 0) {
         return error.EmptyRequest;
     }
@@ -136,7 +131,7 @@ pub fn deserialise(self: Resp, raw: []const u8) !Message {
 /// e.g. "*2\r\n$4\r\nECHO\r\n$5\r\nhello\r\n"
 /// item 1: "$4\r\nECHO\r\n" => "ECHO\r\n"
 /// item 2: "$5\r\nhello\r\n" => "hello\r\n"
-fn toOwnedMessages(self: Resp, raw: []const u8) ![][]u8 {
+fn toOwnedMessages(self: Proto, raw: []const u8) ![][]u8 {
     var parts = std.mem.splitSequence(u8, raw, CRLF);
     const arrlenbytes = parts.first();
     if (arrlenbytes.len != 2) {
@@ -254,7 +249,7 @@ test "deserialise array" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
 
-    const resp = Resp{ .arena = &arena };
+    const resp = Proto{ .arena = &arena };
     const got = try resp.deserialise(raw);
 
     assert(got.type == DataType.Array);
