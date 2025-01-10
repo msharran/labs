@@ -1,24 +1,17 @@
 const std = @import("std");
 const server = @import("Server.zig");
-const Handler = @import("Handler.zig");
-
-fn pong_handler(_: server.Message) server.Message {
-    return server.Message{ .data_type = server.DataType.SimpleString, .content = "PONG" };
-}
 
 pub fn main() !void {
-    const address = try std.net.Address.parseIp("127.0.0.1", 6397);
+    const address = try std.net.Address.parseIp("127.0.0.1", 6379);
 
-    const gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
-
     const allocator = gpa.allocator();
-    var handler: Handler = Handler.init(allocator);
-    defer handler.deinit();
 
-    handler.register_handler("PING", pong_handler);
+    var svr = try server.init(allocator);
+    defer svr.deinit();
 
-    server.listen_and_serve(address) catch |err| {
+    svr.listenAndServe(address) catch |err| {
         std.debug.print("Failed to start server: {}\n", .{err});
     };
 }

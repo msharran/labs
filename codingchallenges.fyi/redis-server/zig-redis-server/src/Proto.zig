@@ -11,10 +11,20 @@ comptime {
     std.debug.assert(CRLF_LEN == 4);
 }
 
-arena: *std.heap.ArenaAllocator,
+/// arena allocator is used to minimise memory allocations
+/// and deallocations. Deserialisation of messages
+/// (especially arrays) can be expensive in terms of memory
+/// allocations.
+/// (My reasoning)
+arena: std.heap.ArenaAllocator,
 
-pub fn init(arena: *std.heap.ArenaAllocator) Proto {
+pub fn init(allocator: std.mem.Allocator) Proto {
+    const arena = std.heap.ArenaAllocator.init(allocator);
     return Proto{ .arena = arena };
+}
+
+pub fn deinit(self: Proto) void {
+    self.arena.deinit();
 }
 
 pub const DataType = enum {
@@ -114,7 +124,8 @@ pub fn deserialise(self: Proto, raw: []const u8) !Message {
             const raw_msgs = try self.toOwnedMessages(raw);
 
             // init an array list of messages
-            var list = std.ArrayList(Message).init(self.arena.allocator());
+            var arena = self.arena;
+            var list = std.ArrayList(Message).init(arena.allocator());
 
             for (raw_msgs) |msg| {
                 const m = try self.deserialise(msg);
@@ -140,7 +151,8 @@ fn toOwnedMessages(self: Proto, raw: []const u8) ![][]u8 {
 
     const arr_len = try std.fmt.parseInt(usize, arrlenbytes[1..], 10);
 
-    var commands = std.ArrayList([]u8).init(self.arena.allocator());
+    var arena = self.arena;
+    var commands = std.ArrayList([]u8).init(arena.allocator());
 
     var cmd: ?std.ArrayList(u8) = null;
     while (parts.next()) |part| {
@@ -154,7 +166,7 @@ fn toOwnedMessages(self: Proto, raw: []const u8) ![][]u8 {
 
             // init new raw_content with the data_type part
             // no need deinit since we are converting to owned slice
-            cmd = std.ArrayList(u8).init(self.arena.allocator());
+            cmd = std.ArrayList(u8).init(arena.allocator());
 
             try cmd.?.appendSlice(part);
             try cmd.?.appendSlice(CRLF);
@@ -178,16 +190,18 @@ fn toOwnedMessages(self: Proto, raw: []const u8) ![][]u8 {
     return s;
 }
 
-pub fn serialise(allocator: std.mem.Allocator, m: Message) ![]u8 {
+pub fn serialise(self: Proto, m: Message) ![]u8 {
     const data_type = try m.type.toChar();
     const content = m.value;
 
     var buf: []u8 = undefined;
     switch (m.type) {
         DataType.SimpleString, DataType.Error, DataType.Integer => {
-            buf = try allocator.alloc(u8, 1 + content.len + CRLF_LEN); // data_type + content + crlf
-            errdefer allocator.free(buf);
-            _ = try std.fmt.bufPrint(buf, "{c}{s}{s}", .{ data_type, content, CRLF });
+            var arena = self.arena;
+            var a = arena.allocator();
+            buf = try a.alloc(u8, 1 + content.single.len + CRLF_LEN); // data_type + content + crlf
+            errdefer a.free(buf);
+            _ = try std.fmt.bufPrint(buf, "{c}{s}{s}", .{ data_type, content.single, CRLF });
         },
         else => {
             return error.UnsupportedDataType;
@@ -195,8 +209,6 @@ pub fn serialise(allocator: std.mem.Allocator, m: Message) ![]u8 {
     }
     return buf;
 }
-
-// write test for serialise fn
 
 test "serialise simple string" {
     const allocator = std.heap.page_allocator;
@@ -246,11 +258,10 @@ test "deserialise first bulk_string" {
 test "deserialise array" {
     const raw = "*3\\r\\n$4\\r\\nECHO\\r\\n$5\\r\\nhello\\r\\n:123\\r\\n";
 
-    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
-    defer arena.deinit();
+    const proto = Proto.init(std.testing.allocator);
+    defer proto.deinit();
 
-    const resp = Proto{ .arena = &arena };
-    const got = try resp.deserialise(raw);
+    const got = try proto.deserialise(raw);
 
     assert(got.type == DataType.Array);
     assert(got.value.list.items.len == 3);
