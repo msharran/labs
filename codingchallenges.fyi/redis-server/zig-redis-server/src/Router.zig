@@ -23,6 +23,7 @@ pub fn init(allocator: std.mem.Allocator) !Router {
     const routeHandlers = std.StringHashMap(HandlerFn).init(allocator);
     var r = Router{ .routeHandlers = routeHandlers, .allocator = allocator };
     try r.registerRoute("PING", handlers.ping);
+    try r.registerRoute("ECHO", handlers.echo);
     return r;
 }
 

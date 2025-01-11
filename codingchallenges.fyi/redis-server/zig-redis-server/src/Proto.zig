@@ -194,14 +194,25 @@ pub fn serialise(self: Proto, m: Message) ![]u8 {
     const data_type = try m.type.toChar();
     const content = m.value;
 
+    var arena = self.arena;
     var buf: []u8 = undefined;
     switch (m.type) {
-        DataType.SimpleString, DataType.Error, DataType.Integer => {
-            var arena = self.arena;
+        .SimpleString, .Error, .Integer => {
             var a = arena.allocator();
             buf = try a.alloc(u8, 1 + content.single.len + CRLF_LEN); // data_type + content + crlf
             errdefer a.free(buf);
             _ = try std.fmt.bufPrint(buf, "{c}{s}{s}", .{ data_type, content.single, CRLF });
+        },
+        .BulkString => {
+            // total len = data_type + CRLF + conent len + CRLF + content + CRLF
+            // convert content.len to string and get the length of the string
+            var content_len: [1024]u8 = undefined;
+            const content_len_str = try std.fmt.bufPrint(&content_len, "{d}", .{content.single.len});
+
+            var a = arena.allocator();
+            buf = try a.alloc(u8, 1 + CRLF_LEN + content_len_str.len + CRLF_LEN + content.single.len + CRLF_LEN);
+            errdefer a.free(buf);
+            _ = try std.fmt.bufPrint(buf, "{c}{s}{s}{s}{s}{s}", .{ data_type, CRLF, content_len_str, CRLF, content.single, CRLF });
         },
         else => {
             return error.UnsupportedDataType;
