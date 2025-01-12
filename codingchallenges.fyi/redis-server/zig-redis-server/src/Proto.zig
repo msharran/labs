@@ -4,11 +4,10 @@ const assert = debug.assert;
 
 const Proto = @This();
 
-const CRLF: []const u8 = "\\r\\n";
+const CRLF: []const u8 = "\r\n";
 const CRLF_LEN: usize = CRLF.len;
 comptime {
-    // assert that the length of CRLF is 4
-    std.debug.assert(CRLF_LEN == 4);
+    std.debug.assert(CRLF_LEN == 2);
 }
 
 /// arena allocator is used to minimise memory allocations
@@ -43,21 +42,21 @@ pub const DataType = enum {
 
     fn toChar(self: DataType) !u8 {
         return switch (self) {
-            DataType.SimpleString => @intCast('+'),
-            DataType.Error => @intCast('-'),
-            DataType.Integer => @intCast(':'),
-            DataType.BulkString => @intCast('$'),
-            DataType.Array => @intCast('*'),
+            .SimpleString => @intCast('+'),
+            .Error => @intCast('-'),
+            .Integer => @intCast(':'),
+            .BulkString => @intCast('$'),
+            .Array => @intCast('*'),
         };
     }
 
     fn fromChar(data_type: u8) !DataType {
         return switch (data_type) {
-            '+' => DataType.SimpleString,
-            '-' => DataType.Error,
-            ':' => DataType.Integer,
-            '$' => DataType.BulkString,
-            '*' => DataType.Array,
+            '+' => .SimpleString,
+            '-' => .Error,
+            ':' => .Integer,
+            '$' => .BulkString,
+            '*' => .Array,
             else => return error.InvalidDataType,
         };
     }
@@ -93,7 +92,7 @@ pub fn deserialise(self: Proto, raw: []const u8) !Message {
 
     const data_type = try DataType.fromChar(raw[0]);
     switch (data_type) {
-        DataType.SimpleString, DataType.Error, DataType.Integer => {
+        .SimpleString, .Error, .Integer => {
             const value = raw[1 .. raw.len - CRLF_LEN];
             const last_2_bytes = raw[raw.len - CRLF_LEN ..];
             if (!std.mem.eql(u8, last_2_bytes, CRLF)) {
@@ -101,7 +100,7 @@ pub fn deserialise(self: Proto, raw: []const u8) !Message {
             }
             return Message.init(data_type, value);
         },
-        DataType.BulkString => {
+        .BulkString => {
             var parts = std.mem.splitSequence(u8, raw, CRLF);
             const length_part = parts.first();
 
@@ -267,7 +266,7 @@ test "deserialise first bulk_string" {
 }
 
 test "deserialise array" {
-    const raw = "*3\\r\\n$4\\r\\nECHO\\r\\n$5\\r\\nhello\\r\\n:123\\r\\n";
+    const raw = "*3\r\n$4\r\nECHO\r\n$5\r\nhello\r\n:123\r\n";
 
     const proto = Proto.init(std.testing.allocator);
     defer proto.deinit();

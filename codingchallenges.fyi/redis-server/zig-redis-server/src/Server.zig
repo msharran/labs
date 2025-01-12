@@ -46,7 +46,7 @@ pub fn listenAndServe(self: Server, address: std.net.Address) !void {
 
     std.debug.print("=> Server listening on {}\n", .{address});
 
-    var buf: [1024]u8 = undefined;
+    var buf: [128]u8 = undefined;
     while (true) {
         var client_address: net.Address = undefined;
         var client_address_len: posix.socklen_t = @sizeOf(net.Address);
@@ -58,11 +58,18 @@ pub fn listenAndServe(self: Server, address: std.net.Address) !void {
         defer posix.close(socket);
 
         std.debug.print("=> client {} connected\n", .{client_address});
+        defer std.debug.print("=> client {} disconnected\n", .{client_address});
 
-        const read = readAll(socket, &buf) catch |err| {
-            std.debug.print("=> error reading: {}\n", .{err});
+        const read = posix.read(socket, &buf) catch |err| {
+            std.debug.print("error reading: {}\n", .{err});
             continue;
         };
+
+        if (read == 0) {
+            continue;
+        }
+
+        std.debug.print("=> read {} bytes\n", .{read});
 
         if (read == 0) {
             continue;
@@ -79,12 +86,18 @@ pub fn listenAndServe(self: Server, address: std.net.Address) !void {
             continue;
         };
 
+        std.debug.print("=> deserialised message\n", .{});
+
         const resp_msg = try self.router.handle(msg);
+
+        std.debug.print("=> handled message\n", .{});
 
         const raw_msg = self.proto.serialise(resp_msg) catch |err| {
             std.debug.print("=> error serialising: {}\n", .{err});
             continue;
         };
+
+        std.debug.print("=> serialised message\n", .{});
 
         writeAll(socket, raw_msg) catch |err| {
             std.debug.print("=> error writing: {}\n", .{err});
@@ -95,22 +108,13 @@ pub fn listenAndServe(self: Server, address: std.net.Address) !void {
 fn writeAll(socket: posix.socket_t, msg: []const u8) !void {
     var pos: usize = 0;
     while (pos < msg.len) {
+        std.debug.print("=> writing data {s}\n", .{msg[pos..]});
         const written = try posix.write(socket, msg[pos..]);
         if (written == 0) {
             return error.Closed;
         }
         pos += written;
     }
-}
 
-fn readAll(socket: posix.socket_t, buf: []u8) !usize {
-    var pos: usize = 0;
-    while (pos < buf.len) {
-        const read = try posix.read(socket, buf[pos..]);
-        if (read == 0) { // 0 means EOF
-            return pos;
-        }
-        pos += read;
-    }
-    return pos;
+    std.debug.print("=> wrote {} bytes\n", .{pos});
 }
