@@ -69,13 +69,6 @@ pub fn listenAndServe(self: Server, address: std.net.Address) !void {
             continue;
         }
 
-        // TODO revist using any other allocator instead of
-        // arena allocator for proto here.
-        // For every new connection, we allocate memory for the message
-        // but do not deallocate it. This can lead to excessive memory
-        // usage since we only deallocate the memory when the server
-        // is deinitialised.
-
         const redis_proto = Proto.init(self.allocator);
         errdefer redis_proto.deinit();
 
