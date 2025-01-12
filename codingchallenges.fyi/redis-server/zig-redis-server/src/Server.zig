@@ -14,24 +14,18 @@ router: Router,
 /// allocator is used to allocate memory for the server.
 allocator: std.mem.Allocator,
 
-/// proto is used to serialise and deserialise messages.
-proto: Proto,
-
 /// init allocates memory for the server.
 /// Caller should call self.deinit to free the memory.
 pub fn init(allocator: std.mem.Allocator) !Server {
-    const p = Proto.init(allocator);
     const r = try Router.init(allocator);
     return Server{
         .router = r,
         .allocator = allocator,
-        .proto = p,
     };
 }
 
 pub fn deinit(self: *Server) void {
     self.router.deinit();
-    self.proto.deinit();
 }
 
 pub fn listenAndServe(self: Server, address: std.net.Address) !void {
@@ -81,7 +75,11 @@ pub fn listenAndServe(self: Server, address: std.net.Address) !void {
         // but do not deallocate it. This can lead to excessive memory
         // usage since we only deallocate the memory when the server
         // is deinitialised.
-        const msg = self.proto.deserialise(buf[0..read]) catch |err| {
+
+        const redis_proto = Proto.init(self.allocator);
+        errdefer redis_proto.deinit();
+
+        const msg = redis_proto.deserialise(buf[0..read]) catch |err| {
             std.debug.print("=> error serialising: {}\n", .{err});
             continue;
         };
@@ -92,7 +90,7 @@ pub fn listenAndServe(self: Server, address: std.net.Address) !void {
 
         std.debug.print("=> handled message\n", .{});
 
-        const raw_msg = self.proto.serialise(resp_msg) catch |err| {
+        const raw_msg = redis_proto.serialise(resp_msg) catch |err| {
             std.debug.print("=> error serialising: {}\n", .{err});
             continue;
         };
@@ -102,6 +100,8 @@ pub fn listenAndServe(self: Server, address: std.net.Address) !void {
         writeAll(socket, raw_msg) catch |err| {
             std.debug.print("=> error writing: {}\n", .{err});
         };
+
+        redis_proto.deinit();
     }
 }
 
