@@ -1,6 +1,6 @@
 #!/bin/bash
 sudo dnf -y groupinstall "Development Tools"
-sudo dnf install -y git bat fzf zoxide eza ripgrep neovim make curl zig golang stow fish
+sudo dnf install -y git bat fzf zoxide eza ripgrep neovim make curl zig golang stow fish btop
 
 # Install dotfiles
 git clone https://github.com/msharran/.dotfiles /home/msharran/.dotfiles
