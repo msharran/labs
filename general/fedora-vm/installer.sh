@@ -4,8 +4,10 @@ set -e
 
 echo "*Installing dependencies"
 sudo dnf -y update
-sudo dnf -y group install workstation-product-environment
-sudo dnf install -y git\
+# sudo dnf -y group install workstation-product-environment
+sudo dnf install -y \
+    wget\
+    git\
     bat\
     fzf\
     zoxide\
@@ -23,21 +25,22 @@ sudo dnf install -y git\
 ZIG_VERSION=0.14.0-dev.2606+b039a8b61
 echo "*Installing zig $ZIG_VERSION"
 
-pushd /opt \
-    && wget https://ziglang.org/builds/zig-linux-aarch64-${ZIG_VERSION}.tar.xz \
-    && tar -xf zig-linux-aarch64-${ZIG_VERSION}.tar.xz \
-    && ln -s /opt/zig-linux-aarch64-${ZIG_VERSION}/zig /usr/local/bin/zig \
-    && rm zig-linux-aarch64-${ZIG_VERSION}.tar.xz \
-    && zig version
-    && popd
+pushd $HOME/.local
+    wget https://ziglang.org/builds/zig-linux-aarch64-${ZIG_VERSION}.tar.xz 
+    tar -xf zig-linux-aarch64-${ZIG_VERSION}.tar.xz 
+    sudo ln -sf $HOME/.local/zig-linux-aarch64-${ZIG_VERSION}/zig /usr/local/bin/zig
+    rm zig-linux-aarch64-${ZIG_VERSION}.tar.xz 
+    zig version
+popd
 
 echo "*Installing dotfiles"
+if [[ -d /home/msharran/.dotfiles ]]; then
+    echo "* Removing existing dotfiles"
+    rm -rf /home/msharran/.dotfiles
+fi
 git clone https://github.com/msharran/.dotfiles /home/msharran/.dotfiles
 cd /home/msharran/.dotfiles
 make
-
-echo "*Installing nvim Plugins"
-nvim --headless +PlugInstall +qall
 
 echo "*Installing starship"
 curl -sS https://starship.rs/install.sh | sh
