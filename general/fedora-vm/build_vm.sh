@@ -19,6 +19,9 @@ run_cmd orbctl create -a amd64 -p -u msharran fedora
 echo "* Pushing Installer into the VM"
 run_cmd orbctl -m fedora push installer.sh /home/msharran/installer.sh
 
+echo "* Pushing Installer into the VM"
+run_cmd orbctl -m fedora push ~/.dotfiles-private /home/msharran/.dotfiles-private
+
 echo "* Running Installer Script"
 run_cmd orbctl -m fedora run bash /home/msharran/installer.sh
 
