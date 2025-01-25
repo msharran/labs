@@ -3,9 +3,8 @@
 set -e
 
 echo "*Installing dependencies"
-sudo dnf -y update
-# sudo dnf -y group install workstation-product-environment
-sudo dnf install -y \
+sudo apt-get -y update
+sudo apt-get install -y \
     wget\
     git\
     bat\
@@ -31,15 +30,6 @@ pushd $HOME/.local
     rm zig-linux-aarch64-${ZIG_VERSION}.tar.xz 
     zig version
 popd
-
-echo "*Installing dotfiles"
-if [[ -d /home/msharran/.dotfiles ]]; then
-    echo "* Removing existing dotfiles"
-    rm -rf /home/msharran/.dotfiles
-fi
-git clone https://github.com/msharran/.dotfiles /home/msharran/.dotfiles
-cd /home/msharran/.dotfiles
-make
 
 echo "*Installing starship"
 curl -sS https://starship.rs/install.sh | sh
