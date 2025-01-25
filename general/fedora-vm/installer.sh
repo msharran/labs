@@ -19,8 +19,7 @@ sudo dnf install -y \
     golang\
     stow\
     fish\
-    btop\
-    redis
+    btop
 
 ZIG_VERSION=0.14.0-dev.2606+b039a8b61
 echo "*Installing zig $ZIG_VERSION"
