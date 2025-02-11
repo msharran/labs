@@ -1,0 +1,6 @@
+config:
+    service:name: foo
+    service:image: httpd:latest
+    service:ingress_class_name: internal-ingress
+    service:deployment_strategy: canary
+    service:canary_weight: 20

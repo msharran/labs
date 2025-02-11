@@ -1,0 +1,30 @@
+config:
+    service:name: jenkins
+    service:ingress_disabled: false # <- creates ingress
+    service:ingress_class_name: internal-ingress
+    service:provider_type: helm
+    service:helm:
+        ingress_rules:
+            - name_suffix: "" # uses the default host, <service-name>.example.com
+              port: 8080
+            - name_suffix: "-agent"
+              port: 50000
+        chart: jenkins
+        repository_opts:
+            repo: "https://charts.jenkins.io"
+        version: "5.8.10"
+        values:
+            serviceType: ClusterIP
+            controller:
+                JCasC:
+                    securityRealm: |-
+                        local:
+                          allowsSignup: false
+                          enableCaptcha: false
+                          users:
+                          - id: admin
+                            name: "Jenkins Admin"
+                            password: admin
+                    authorizationStrategy: |-
+                        loggedInUsersCanDoAnything:
+                          allowAnonymousRead: false

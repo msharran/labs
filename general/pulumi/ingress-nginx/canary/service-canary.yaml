@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+    labels:
+        app: foo-canary
+    name: foo-canary
+spec:
+    ports:
+        - port: 80
+          protocol: TCP
+          targetPort: 80
+    selector:
+        app: foo-canary
+    type: ClusterIP

@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: foo-canary
+    annotations:
+        nginx.ingress.kubernetes.io/canary: "true"
+        nginx.ingress.kubernetes.io/canary-weight: "90"
+spec:
+    ingressClassName: nginx
+    rules:
+        - host: foo.example.com
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: foo-canary
+                            port:
+                                number: 80

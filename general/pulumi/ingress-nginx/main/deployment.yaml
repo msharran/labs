@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    labels:
+        app: foo-canary
+    name: foo
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: foo
+    template:
+        metadata:
+            creationTimestamp: null
+            labels:
+                app: foo
+        spec:
+            containers:
+                - image: arm64v8/httpd
+                  imagePullPolicy: Always
+                  name: httpd
+                  resources: {}
+            restartPolicy: Always
