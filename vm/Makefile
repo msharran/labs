@@ -7,8 +7,8 @@ VM_SSH_HOST ?= vm
 
 vm/bootstrap:
 	$(MAKE) vm/secrets
-	rsync -arP ./bootstrap.sh $(VM_SSH_HOST):~/projects/bootstrap.sh && \
-	ssh $(VM_SSH_HOST) "bash ~/projects/bootstrap.sh"
+	rsync -arP ./bootstrap.sh $(VM_SSH_HOST):~/bootstrap.sh && \
+	ssh $(VM_SSH_HOST) "bash ~/bootstrap.sh"
 
 vm/secrets:
 	rsync -arP ~/.dotfiles-private $(VM_SSH_HOST):~/projects

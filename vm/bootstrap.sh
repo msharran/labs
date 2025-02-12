@@ -37,6 +37,9 @@ curl -sS https://starship.rs/install.sh | sh
 echo "*Setting fish as default shell"
 sudo chsh -s /usr/bin/fish msharran
 
+echo "*Setting up projects dir"
+mkdir -p $HOME/projects/{work,play}
+
 echo "*Installing dotfiles"
 if [ ! -d "$HOME/.dotfiles" ]; then
     git clone https://github.com/msharran/.dotfiles $HOME/.dotfiles
