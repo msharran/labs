@@ -1,0 +1,22 @@
+config:
+    service:name: internal-ingress-nginx
+    service:ingress_disabled: true
+    service:provider_type: helm
+    service:helm:
+        chart: ingress-nginx
+        repository_opts:
+            repo: "https://kubernetes.github.io/ingress-nginx"
+        version: "4.12.0"
+        values:
+            controller:
+                ingressClass: internal-ingress
+                ingressClassResource:
+                    controllerValue: k8s.io/internal-ingress-nginx
+                    name: internal-ingress
+                service:
+                    type: NodePort
+                    extraLabels:
+                        app: internal-ingress
+    service:k8s_provider:
+        cluster_identifier: kind-2
+        kube_config: ""

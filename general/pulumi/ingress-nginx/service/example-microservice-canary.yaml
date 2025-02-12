@@ -1,6 +1,0 @@
-config:
-    service:name: foo
-    service:image: nginx:latest
-    service:ingress_class_name: internal-ingress
-    service:deployment_strategy: canary
-    service:canary_weight: 20

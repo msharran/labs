@@ -16,10 +16,12 @@ helm_values = config.get_object("helm_values", {})
 disable_ingress = config.get_bool("ingress_disabled", False)
 ingress_class_name = config.get("ingress_class_name","")
 
-
-k8s_namespace = service_name
-if is_canary:
-    k8s_namespace = f"canary-{service_name}"
+k8s_provider = kubernetes.Provider(
+    "k8s-provider",
+    enable_server_side_apply=True,
+    kubeconfig=config.require_object("k8s_provider")["kube_config"],
+    cluster_identifier=config.require_object("k8s_provider")["cluster_identifier"]
+)
 
 service_labels = {
     "service": service_name,
@@ -31,28 +33,11 @@ namespace = kubernetes.core.v1.Namespace(
     f"ns-{service_name}",
     metadata=kubernetes.meta.v1.ObjectMetaArgs(
         labels=service_labels,
-        name=k8s_namespace,
-    )
+        name=f"{service_name}-canary" if is_canary else service_name,
+    ),
+    opts=pulumi.ResourceOptions(provider=k8s_provider)
 )
 
-def ingress_rule(name=service_name, suffix="", port=80) -> kubernetes.networking.v1.IngressRuleArgs:
-    return kubernetes.networking.v1.IngressRuleArgs(
-        host=f"{name}.example.com",
-        http=kubernetes.networking.v1.HTTPIngressRuleValueArgs(
-            paths=[kubernetes.networking.v1.HTTPIngressPathArgs(
-                path="/",
-                path_type="Prefix",
-                backend=kubernetes.networking.v1.IngressBackendArgs(
-                    service=kubernetes.networking.v1.IngressServiceBackendArgs(
-                        name=f"{name}{suffix}",
-                        port=kubernetes.networking.v1.ServiceBackendPortArgs(
-                            number=port
-                        )
-                    )
-                )
-            )]
-        )
-    )
 
 def create_ingress(rules: List[kubernetes.networking.v1.IngressRuleArgs], opts: Optional[pulumi.ResourceOptions] = None):
     if ingress_class_name == "":
@@ -68,7 +53,7 @@ def create_ingress(rules: List[kubernetes.networking.v1.IngressRuleArgs], opts: 
     ingress = kubernetes.networking.v1.Ingress(
             f"ingress-{service_name}",
             metadata=kubernetes.meta.v1.ObjectMetaArgs(
-                namespace=k8s_namespace,
+                namespace=namespace.metadata.name,
                 name=f"{service_name}",
                 annotations={
                     **canary_annotations,
@@ -77,7 +62,8 @@ def create_ingress(rules: List[kubernetes.networking.v1.IngressRuleArgs], opts: 
             spec=kubernetes.networking.v1.IngressSpecArgs(
                 ingress_class_name=ingress_class_name,
                 rules=rules
-            )
+            ),
+            opts=opts,
         )
 
 if provider_type == "helm":
@@ -90,6 +76,7 @@ if provider_type == "helm":
         skip_await=False, # required by ingress which depends on this
         values=helm["values"],
         version=helm["version"],
+        opts=pulumi.ResourceOptions(provider=k8s_provider)
     )
 
 
@@ -124,7 +111,10 @@ if provider_type == "helm":
 
         create_ingress(
             rules=rules,
-            opts=pulumi.ResourceOptions(depends_on=helm_release)
+            opts=pulumi.ResourceOptions(
+                depends_on=helm_release,
+                provider=k8s_provider,
+            )
         )
     else:
         pulumi.info("ingress disabled, skipping creation")
@@ -136,7 +126,7 @@ else:
     deployment = kubernetes.apps.v1.Deployment(
         f"deployment-{service_name}",
         metadata=kubernetes.meta.v1.ObjectMetaArgs(
-            namespace=k8s_namespace,
+            namespace=namespace.metadata.name,
             name=f"{service_name}"
         ),
         spec=kubernetes.apps.v1.DeploymentSpecArgs(
@@ -162,14 +152,15 @@ else:
                     )]
                 )
             )
-        )
+        ),
+        opts=pulumi.ResourceOptions(provider=k8s_provider)
     )
 
     # Create the Nginx service
     service = kubernetes.core.v1.Service(
         f"service-{service_name}",
         metadata=kubernetes.meta.v1.ObjectMetaArgs(
-            namespace=k8s_namespace,
+            namespace=namespace.metadata.name,
             name=f"{service_name}"
         ),
         spec=kubernetes.core.v1.ServiceSpecArgs(
@@ -180,7 +171,8 @@ else:
                 port=80,
                 target_port=port
             )]
-        )
+        ),
+        opts=pulumi.ResourceOptions(provider=k8s_provider)
     )
     if not disable_ingress:
         create_ingress(

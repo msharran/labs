@@ -4,3 +4,6 @@ config:
     service:ingress_class_name: internal-ingress
     service:deployment_strategy: canary
     service:canary_weight: 20
+    service:k8s_provider:
+        cluster_identifier: kind-1
+        kube_config: ""

@@ -4,3 +4,6 @@ zig-out
 .zig-cache
 .ruby-lsp
 .DS_Store
+venv
+.venv
+__pycache__
