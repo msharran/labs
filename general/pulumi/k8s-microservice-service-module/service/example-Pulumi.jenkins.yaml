@@ -1,6 +1,5 @@
 config:
     service:name: jenkins
-    service:ingress_disabled: false # <- creates ingress
     service:ingress_class_name: internal-ingress
     service:provider_type: helm
     service:helm:

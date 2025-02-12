@@ -57,7 +57,8 @@ def create_ingress(rules: List[kubernetes.networking.v1.IngressRuleArgs], opts: 
                 name=f"{service_name}",
                 annotations={
                     **canary_annotations,
-                }
+                },
+                labels=service_labels
             ),
             spec=kubernetes.networking.v1.IngressSpecArgs(
                 ingress_class_name=ingress_class_name,
