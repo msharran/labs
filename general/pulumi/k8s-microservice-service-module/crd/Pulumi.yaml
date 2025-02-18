@@ -1,0 +1,8 @@
+name: crd
+runtime:
+    name: python
+    options:
+        toolchain: pip
+        virtualenv: ../../../../venv
+description: A Python program to deploy a Helm chart onto a Kubernetes cluster
+config: {}

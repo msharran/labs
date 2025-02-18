@@ -1,0 +1,8 @@
+config:
+    crd:name: kind1-crds
+    crd:definitions:
+        - name: istio-gateway
+          yaml_file: istio-gateway.crd.yaml
+    crd:k8s_provider:
+        cluster_identifier: kind-1
+        kube_config: |
