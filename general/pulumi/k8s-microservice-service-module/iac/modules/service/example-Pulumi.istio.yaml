@@ -1,0 +1,19 @@
+config:
+    service:name: istio-kind1
+    service:ingress_disabled: true
+    service:provider_type: helm
+    service:helm:
+        - chart: base
+          repository_opts:
+              repo: "https://istio-release.storage.googleapis.com/charts"
+          version: "1.24.3"
+          values: {}
+        - chart: istiod
+          repository_opts:
+              repo: "https://istio-release.storage.googleapis.com/charts"
+          version: "1.24.3"
+          values: {}
+    service:k8s_provider:
+        namespace: istio-system # Only allowed for helm provider
+        cluster_identifier: kind-1
+        kube_config: ""

@@ -1,8 +1,8 @@
-name: crd
+name: k8s__gateway_api
 runtime:
     name: python
     options:
         toolchain: pip
-        virtualenv: ../../../../venv
+        virtualenv: /home/msharran/projects/play/labs/venv
 description: A Python program to deploy a Helm chart onto a Kubernetes cluster
 config: {}

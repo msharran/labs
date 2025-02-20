@@ -1,0 +1,6 @@
+config:
+    k8s__gateway_api:name: istio-gateway-internal-kind1
+    k8s__gateway_api:gateway_class_name: istio
+    k8s__gateway_api:k8s_provider:
+        cluster_identifier: kind-1
+        kube_config: ""
