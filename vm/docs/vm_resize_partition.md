@@ -1,9 +1,9 @@
 
-# SOP: Resizing Ubuntu Disk in UTM VM (GPT/LVM)
+# SOP: Resizing Ubuntu Disk in UTM VM
 
 ## Objective
 
-Expand the disk space of an Ubuntu guest OS (using GPT and LVM) within a UTM VM.
+Expand the disk space of an Ubuntu guest OS within a UTM VM.
 
 ## Steps:
 
