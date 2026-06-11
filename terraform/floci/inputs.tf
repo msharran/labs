@@ -7,7 +7,7 @@ variable "aws_endpoint_url" {
 variable "aws_region" {
   description = "Local AWS region. Set by .envrc."
   type        = string
-  default     = "ap-south-1"
+  default     = "us-east-1"
 }
 
 variable "network_cidr" {

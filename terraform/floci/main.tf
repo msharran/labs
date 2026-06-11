@@ -1,5 +1,6 @@
 module "network" {
   source = "./modules/aws-network"
 
-  vpc_cidr = var.network_cidr
+  aws_region = var.aws_region
+  vpc_cidr   = var.network_cidr
 }
