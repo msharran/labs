@@ -1,0 +1,25 @@
+services:
+  floci:
+    image: floci/floci:latest-compat
+    user: root
+    ports:
+      - "4566:4566"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/app/data
+    environment:
+      FLOCI_DEFAULT_REGION: us-east-1
+      FLOCI_STORAGE_MODE: persistent
+      FLOCI_STORAGE_PERSISTENT_PATH: /app/data
+
+      # ECS runs real Docker containers by default; keep Docker socket mounted above.
+      FLOCI_SERVICES_ECS_ENABLED: "true"
+      FLOCI_SERVICES_ECS_MOCK: "false"
+      FLOCI_SERVICES_ECS_DOCKER_NETWORK: ${FLOCI_DOCKER_NETWORK:-${COMPOSE_PROJECT_NAME:-floci-terraform}_default}
+
+      # EKS real mode starts k3s containers and exposes API servers on localhost:6500-6599.
+      FLOCI_SERVICES_EKS_ENABLED: "true"
+      FLOCI_SERVICES_EKS_MOCK: "false"
+      FLOCI_SERVICES_EKS_DOCKER_NETWORK: ${FLOCI_DOCKER_NETWORK:-${COMPOSE_PROJECT_NAME:-floci-terraform}_default}
+      FLOCI_SERVICES_EKS_ENDPOINT_MODE: host
+      FLOCI_SERVICES_EKS_DATA_PATH: /app/data/eks

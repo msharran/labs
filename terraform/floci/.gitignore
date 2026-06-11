@@ -1,0 +1,7 @@
+data/
+.envrc
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+*.tfvars
+*.tfvars.json

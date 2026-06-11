@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AWS Multi-AZ Network Baseline — Infra Interview Refresher</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Newsreader:opsz,wght@6..72,500;6..72,700;6..72,800&display=swap');
+
+    :root {
+      --ink: #181611;
+      --muted: #6f6758;
+      --paper: #f4ead8;
+      --paper-2: #fff7e8;
+      --orange: #eb6f28;
+      --blue: #1867b7;
+      --green: #1d8b57;
+      --violet: #6146c6;
+      --line: rgba(24, 22, 17, .18);
+      --shadow: 0 26px 70px rgba(38, 27, 11, .18);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 8%, rgba(235,111,40,.22), transparent 28rem),
+        radial-gradient(circle at 92% 4%, rgba(24,103,183,.16), transparent 30rem),
+        linear-gradient(135deg, rgba(24,22,17,.035) 25%, transparent 25%) 0 0/22px 22px,
+        var(--paper);
+      font-family: "Newsreader", Georgia, serif;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .09;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .wrap { width: min(1220px, calc(100vw - 34px)); margin: 0 auto; }
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      backdrop-filter: blur(14px);
+      background: rgba(244, 234, 216, .78);
+      border-bottom: 1px solid var(--line);
+    }
+    .topbar .wrap { display: flex; gap: 18px; align-items: center; justify-content: space-between; padding: 12px 0; }
+    .brand { font: 700 12px/1 "IBM Plex Mono", monospace; letter-spacing: .18em; text-transform: uppercase; }
+    nav { display: flex; flex-wrap: wrap; gap: 8px; }
+    nav a {
+      color: var(--ink); text-decoration: none; font: 500 12px/1 "IBM Plex Mono", monospace;
+      border: 1px solid var(--line); border-radius: 999px; padding: 8px 10px; background: rgba(255,255,255,.25);
+    }
+    nav a:hover { background: var(--ink); color: var(--paper); }
+
+    .hero { padding: 72px 0 34px; display: grid; grid-template-columns: 1.05fr .95fr; gap: 30px; align-items: end; }
+    .kicker { font: 700 13px/1.2 "IBM Plex Mono", monospace; letter-spacing: .22em; text-transform: uppercase; color: var(--orange); }
+    h1 { margin: 14px 0 16px; font-size: clamp(58px, 8vw, 112px); line-height: .82; letter-spacing: -.055em; }
+    .lede { font-size: clamp(21px, 2.4vw, 31px); line-height: 1.05; color: #342f26; max-width: 850px; }
+    .hero-card {
+      background: var(--ink); color: var(--paper-2); border-radius: var(--radius); padding: 24px;
+      box-shadow: var(--shadow); transform: rotate(1.2deg);
+    }
+    .hero-card h2 { margin: 0 0 14px; font-size: 30px; line-height: .95; letter-spacing: -.03em; }
+    .hero-card ul { margin: 0; padding-left: 20px; font-size: 18px; line-height: 1.35; }
+    .mono { font-family: "IBM Plex Mono", monospace; }
+
+    .diagram {
+      background: rgba(255, 247, 232, .78); border: 1px solid var(--line); border-radius: 34px;
+      padding: 18px; box-shadow: var(--shadow); margin: 20px 0 48px;
+    }
+    .diagram img { width: 100%; display: block; border-radius: 24px; border: 1px solid var(--line); background: white; }
+
+    section { padding: 38px 0; }
+    .section-head { display: grid; grid-template-columns: 290px 1fr; gap: 28px; align-items: start; margin-bottom: 18px; }
+    .section-num { font: 700 12px/1 "IBM Plex Mono", monospace; color: var(--muted); text-transform: uppercase; letter-spacing: .18em; }
+    h2 { margin: 0; font-size: clamp(38px, 5vw, 72px); line-height: .86; letter-spacing: -.045em; }
+    h3 { margin: 0 0 10px; font-size: 28px; line-height: 1; letter-spacing: -.025em; }
+    p { font-size: 19px; line-height: 1.38; margin: 0 0 12px; }
+
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card {
+      background: rgba(255, 247, 232, .82); border: 1px solid var(--line); border-radius: 24px; padding: 20px;
+      box-shadow: 0 14px 35px rgba(38,27,11,.08);
+    }
+    .card.accent { background: var(--ink); color: var(--paper-2); }
+    .tag { display: inline-flex; border: 1px solid currentColor; border-radius: 999px; padding: 5px 8px; font: 700 11px/1 "IBM Plex Mono", monospace; letter-spacing: .09em; text-transform: uppercase; margin-bottom: 14px; }
+    .card ul, .card ol { margin: 0; padding-left: 20px; font-size: 17px; line-height: 1.42; }
+    .card li + li { margin-top: 6px; }
+
+    .flow { display: grid; gap: 12px; counter-reset: step; }
+    .step {
+      display: grid; grid-template-columns: 76px 1fr; gap: 16px; align-items: start;
+      background: rgba(255,247,232,.86); border: 1px solid var(--line); border-radius: 24px; padding: 18px;
+    }
+    .step::before {
+      counter-increment: step; content: counter(step, decimal-leading-zero);
+      width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center;
+      background: var(--orange); color: white; font: 700 18px/1 "IBM Plex Mono", monospace;
+      box-shadow: 8px 8px 0 rgba(24,22,17,.14);
+    }
+    .step h3 { font-size: 26px; }
+    code {
+      font-family: "IBM Plex Mono", monospace; font-size: .85em; padding: .12em .35em; border-radius: 6px;
+      background: rgba(24,22,17,.08); border: 1px solid rgba(24,22,17,.1);
+    }
+
+    .matrix { overflow-x: auto; border-radius: 24px; border: 1px solid var(--line); background: rgba(255,247,232,.88); }
+    table { width: 100%; border-collapse: collapse; min-width: 850px; font-family: "IBM Plex Mono", monospace; font-size: 13px; }
+    th, td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { background: rgba(24,22,17,.08); text-transform: uppercase; letter-spacing: .08em; font-size: 11px; }
+    tr:last-child td { border-bottom: 0; }
+
+    .callout {
+      margin-top: 16px; padding: 22px; border-radius: 26px; background: var(--blue); color: white;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    }
+    .callout strong { font-size: 24px; line-height: 1; }
+
+    .footer { padding: 44px 0 70px; color: var(--muted); font: 500 13px/1.4 "IBM Plex Mono", monospace; }
+
+    @media (max-width: 900px) {
+      .hero, .section-head, .callout { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .hero-card { transform: none; }
+      nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap">
+      <div class="brand">AWS Network Baseline</div>
+      <nav>
+        <a href="#summary">Summary</a><a href="#flows">Traffic</a><a href="#configure">Configure</a><a href="#interview">Interview</a>
+      </nav>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <header class="hero">
+      <div>
+        <div class="kicker">Senior Infra Refresher</div>
+        <h1>Multi‑AZ VPC, public edge, private compute.</h1>
+        <p class="lede">This is a classic production network: a regional VPC split across two Availability Zones, internet ingress through an Application Load Balancer in public subnets, workloads in private subnets, zonal NAT for outbound internet, and an S3 Gateway Endpoint to keep S3 traffic off the public internet.</p>
+      </div>
+      <aside class="hero-card">
+        <h2>Mental model in one sentence</h2>
+        <ul>
+          <li><b>Public subnets</b> host internet-facing infrastructure: ALB nodes and NAT Gateways.</li>
+          <li><b>Private subnets</b> host application servers/ASG instances with no public IPs.</li>
+          <li><b>Route tables</b> decide whether packets go to IGW, NAT, local VPC, or S3 endpoint.</li>
+          <li><b>Security groups</b> are stateful; <b>NACLs</b> are stateless subnet guardrails.</li>
+        </ul>
+      </aside>
+    </header>
+
+    <div class="diagram">
+      <img src="aws_network_baseline.png" alt="AWS multi-AZ network baseline diagram" />
+    </div>
+
+    <section id="summary">
+      <div class="section-head">
+        <div class="section-num">01 / Architecture</div>
+        <h2>What each component is doing</h2>
+      </div>
+      <div class="grid">
+        <article class="card accent"><span class="tag">VPC</span><h3>10.0.0.0/16 boundary</h3><p>One isolated regional network. All subnets route locally to each other by default through the implicit <code>local</code> route.</p></article>
+        <article class="card"><span class="tag">AZ A</span><h3>10.0.1.0/24 + 10.0.11.0/24</h3><p>Public subnet A contains ALB node A and NAT‑A. Private subnet A contains app/server A.</p></article>
+        <article class="card"><span class="tag">AZ B</span><h3>10.0.2.0/24 + 10.0.12.0/24</h3><p>Same pattern in another failure domain. This gives zonal resilience and avoids cross‑AZ NAT dependency during normal operation.</p></article>
+        <article class="card"><span class="tag">IGW</span><h3>Internet Gateway</h3><p>Attached to the VPC. Public route tables send <code>0.0.0.0/0 → igw</code>. Required for public ALB ingress and NAT Gateway egress.</p></article>
+        <article class="card"><span class="tag">NAT</span><h3>Managed egress</h3><p>Each NAT Gateway sits in a public subnet with an Elastic IP. Private subnets send default outbound traffic to their same‑AZ NAT.</p></article>
+        <article class="card"><span class="tag">S3 Endpoint</span><h3>Private AWS service path</h3><p>Gateway endpoint adds prefix-list routes for S3 in private route tables, so S3 traffic bypasses NAT/IGW and can be restricted by endpoint policy.</p></article>
+      </div>
+    </section>
+
+    <section id="flows">
+      <div class="section-head">
+        <div class="section-num">02 / Packet Walks</div>
+        <h2>How traffic flows</h2>
+      </div>
+      <div class="flow">
+        <div class="step"><div><h3>Internet user → application</h3><p>Client resolves ALB DNS. Packet enters AWS edge, hits the VPC through the Internet Gateway path, then lands on one of the ALB nodes in public subnet A or B. The ALB forwards to healthy private targets over their private IPs. Response returns app → ALB → client.</p><p class="mono"><code>client → IGW → public ALB subnet → ALB node → private app subnet → server</code></p></div></div>
+        <div class="step"><div><h3>Private server → internet</h3><p>Server A has no public IP. Its route table sends <code>0.0.0.0/0</code> to NAT‑A. NAT‑A rewrites the source to its Elastic IP and sends traffic through the public subnet route table to the IGW. Return traffic is mapped back by NAT state.</p><p class="mono"><code>server A → private-rt-a → NAT-A/EIP → public-rt-a → IGW → internet</code></p></div></div>
+        <div class="step"><div><h3>Private server → S3</h3><p>The S3 prefix-list route is more specific than <code>0.0.0.0/0</code>, so it wins. Traffic goes to the S3 Gateway Endpoint, not NAT. Benefits: lower cost, no public internet path, IAM/endpoint policy controls.</p><p class="mono"><code>server → private route table → com.amazonaws.region.s3 endpoint → S3</code></p></div></div>
+        <div class="step"><div><h3>AZ failure behavior</h3><p>ALB stops routing to unhealthy targets/AZs. ASG can replace instances in healthy subnets. With one NAT per AZ, surviving AZ egress continues. If NAT‑A alone fails, subnet A egress fails unless you automate failover to NAT‑B, accepting cross‑AZ data charges.</p></div></div>
+      </div>
+    </section>
+
+    <section id="configure">
+      <div class="section-head">
+        <div class="section-num">03 / Build Sheet</div>
+        <h2>How to configure it in AWS</h2>
+      </div>
+      <div class="matrix">
+        <table>
+          <thead><tr><th>Layer</th><th>Configuration</th><th>Key detail / interview hook</th></tr></thead>
+          <tbody>
+            <tr><td>VPC</td><td>Create VPC <code>10.0.0.0/16</code>; enable DNS hostnames and DNS resolution.</td><td>VPC is regional; subnets are AZ-scoped. Default local route covers east/west traffic.</td></tr>
+            <tr><td>Subnets</td><td>Public: <code>10.0.1.0/24</code> in AZ-a, <code>10.0.2.0/24</code> in AZ-b. Private: <code>10.0.11.0/24</code>, <code>10.0.12.0/24</code>.</td><td>Set public subnets to auto-assign public IPv4 only if you need public EC2; NAT gets EIP separately.</td></tr>
+            <tr><td>Internet Gateway</td><td>Create IGW and attach to VPC.</td><td>IGW does not make a subnet public by itself; route table + public IP/EIP complete the path.</td></tr>
+            <tr><td>Public route tables</td><td>Associate public-rt-a with public subnet A and public-rt-b with public subnet B. Add <code>0.0.0.0/0 → IGW</code>.</td><td>ALB nodes and NAT Gateways need this route for internet-facing behavior.</td></tr>
+            <tr><td>NAT Gateways</td><td>Allocate one Elastic IP per NAT. Create NAT-A in public subnet A, NAT-B in public subnet B.</td><td>Best practice is same-AZ private subnet → same-AZ NAT to reduce blast radius and cross-AZ cost.</td></tr>
+            <tr><td>Private route tables</td><td>Associate private-rt-a with private subnet A: <code>0.0.0.0/0 → NAT-A</code>. private-rt-b: <code>0.0.0.0/0 → NAT-B</code>.</td><td>Private instances can initiate outbound connections but cannot receive unsolicited inbound internet traffic.</td></tr>
+            <tr><td>S3 Gateway Endpoint</td><td>Create VPC endpoint type Gateway for S3. Attach to private route tables. Optionally add endpoint policy.</td><td>AWS injects route to S3 prefix list. More specific than default route, so it bypasses NAT.</td></tr>
+            <tr><td>ALB</td><td>Create internet-facing ALB across both public subnets. Listener 80/443. Target group points to private instances/IPs.</td><td>ALB has nodes in each public subnet; security group allows client ingress and app egress.</td></tr>
+            <tr><td>ASG / app tier</td><td>Launch template with no public IP. ASG subnets = private A + private B. Register with ALB target group.</td><td>Use health checks, scaling policy, user data/SSM, IAM role, and IMDSv2.</td></tr>
+            <tr><td>Security</td><td>ALB SG: inbound 443 from internet; outbound app port to app SG. App SG: inbound app port only from ALB SG; outbound as needed.</td><td>Security groups are stateful and can reference other SGs. NACLs are stateless and subnet-level.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <div><strong>Public vs private is a route-table property.</strong><p>A subnet is “public” when it has a default route to an IGW and resources have public IPs. A subnet is “private” when default internet egress goes through NAT or not at all.</p></div>
+        <div><strong>Most production bugs are route + SG mismatches.</strong><p>Debug with Reachability Analyzer, VPC Flow Logs, route table effective associations, NACL ephemeral ports, ALB target health, and NAT metrics.</p></div>
+      </div>
+    </section>
+
+    <section id="interview">
+      <div class="section-head">
+        <div class="section-num">04 / Interview Memory</div>
+        <h2>Senior-level points to say out loud</h2>
+      </div>
+      <div class="grid">
+        <article class="card"><span class="tag">Resilience</span><ul><li>Two AZs isolate failures.</li><li>ALB spans public subnets and health-checks targets.</li><li>ASG spans private subnets.</li><li>NAT per AZ avoids a single egress bottleneck.</li></ul></article>
+        <article class="card"><span class="tag">Security</span><ul><li>Apps have no public IPs.</li><li>Inbound is only ALB → app SG.</li><li>NACLs are coarse stateless guardrails.</li><li>S3 endpoint policy can restrict buckets/actions.</li></ul></article>
+        <article class="card"><span class="tag">Cost/ops</span><ul><li>NAT hourly + per-GB charges are material.</li><li>S3 Gateway Endpoint saves NAT data processing.</li><li>Cross-AZ NAT failover trades availability for cost.</li><li>Flow Logs help prove packet direction.</li></ul></article>
+      </div>
+    </section>
+
+    <footer class="footer">
+      Source diagram: <code>aws_network_baseline.png</code>. Note: I could not find a local “wiki” file in this repo path, so this is framed for an experienced infra engineer refreshing AWS networking fundamentals.
+    </footer>
+  </main>
+</body>
+</html>
