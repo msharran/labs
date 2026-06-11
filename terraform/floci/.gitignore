@@ -1,5 +1,4 @@
 data/
-.envrc
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
