@@ -14,7 +14,8 @@ variable "vpc_cidr" {
 
 variable "public_subnets" {
   type = map(object({
-    cidr = string
+    cidr              = string
+    availability_zone = optional(string)
   }))
   description = "public subnets"
   default = {
@@ -29,7 +30,8 @@ variable "public_subnets" {
 
 variable "private_subnets" {
   type = map(object({
-    cidr = string
+    cidr              = string
+    availability_zone = optional(string)
   }))
   description = "private subnets"
   default = {
@@ -49,8 +51,9 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "public" {
   for_each = var.public_subnets
 
-  vpc_id     = aws_vpc.main.id
-  cidr_block = each.value.cidr
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = each.value.cidr
+  availability_zone = each.value.availability_zone
 
   tags = {
     Name = each.key
@@ -60,8 +63,9 @@ resource "aws_subnet" "public" {
 resource "aws_subnet" "private" {
   for_each = var.private_subnets
 
-  vpc_id     = aws_vpc.main.id
-  cidr_block = each.value.cidr
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = each.value.cidr
+  availability_zone = each.value.availability_zone
 
   tags = {
     Name = each.key
