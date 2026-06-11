@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+.DS_Store
+aws_network_baseline.png
+aws_network_baseline.svg
+aws_network_baseline.pdf
+aws_network_baseline

@@ -1,0 +1,17 @@
+// Project tasks configuration. See https://zed.dev/docs/tasks for documentation.
+//
+// Example:
+[
+  {
+    "label": "terraform plan",
+    "command": "terraform plan",
+  },
+  {
+    "label": "terraform apply",
+    "command": "terraform apply",
+  },
+  {
+    "label": "terraform destroy",
+    "command": "terraform destroy",
+  },
+]
