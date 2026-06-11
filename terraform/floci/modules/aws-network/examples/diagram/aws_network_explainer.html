@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AWS Multi-AZ Network Baseline — Infra Interview Refresher</title>
+  <title>AWS Multi-AZ Network Baseline — Infrastructure Refresher</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Newsreader:opsz,wght@6..72,500;6..72,700;6..72,800&display=swap');
 
@@ -139,7 +139,7 @@
     <div class="wrap">
       <div class="brand">AWS Network Baseline</div>
       <nav>
-        <a href="#summary">Summary</a><a href="#flows">Traffic</a><a href="#configure">Configure</a><a href="#interview">Interview</a>
+        <a href="#summary">Summary</a><a href="#flows">Traffic</a><a href="#configure">Configure</a><a href="#review">Review</a>
       </nav>
     </div>
   </div>
@@ -201,7 +201,7 @@
       </div>
       <div class="matrix">
         <table>
-          <thead><tr><th>Layer</th><th>Configuration</th><th>Key detail / interview hook</th></tr></thead>
+          <thead><tr><th>Layer</th><th>Configuration</th><th>Key detail</th></tr></thead>
           <tbody>
             <tr><td>VPC</td><td>Create VPC <code>10.0.0.0/16</code>; enable DNS hostnames and DNS resolution.</td><td>VPC is regional; subnets are AZ-scoped. Default local route covers east/west traffic.</td></tr>
             <tr><td>Subnets</td><td>Public: <code>10.0.1.0/24</code> in AZ-a, <code>10.0.2.0/24</code> in AZ-b. Private: <code>10.0.11.0/24</code>, <code>10.0.12.0/24</code>.</td><td>Set public subnets to auto-assign public IPv4 only if you need public EC2; NAT gets EIP separately.</td></tr>
@@ -222,9 +222,9 @@
       </div>
     </section>
 
-    <section id="interview">
+    <section id="review">
       <div class="section-head">
-        <div class="section-num">04 / Interview Memory</div>
+        <div class="section-num">04 / Review Notes</div>
         <h2>Senior-level points to say out loud</h2>
       </div>
       <div class="grid">

@@ -2,18 +2,6 @@
 
 This directory starts a local [Floci](https://floci.io/aws/) AWS emulator with Docker Compose on [OrbStack](https://orbstack.dev/) and configures AWS/Terraform env vars via direnv.
 
-## Interview prep context
-
-Use this directory as the Terraform playground for the dbt Labs interview prep work.
-
-The reading plan lives outside this repository and should be referenced in place:
-
-```text
-/Users/msharran/root/play/wiki-personal/raw/interview/dbtlabs/terraform-reading-plan.md
-```
-
-Agents working in this directory should read that plan for context. Do not move or copy the plan file into this directory.
-
 ## First-time setup
 
 Install prerequisites if needed:

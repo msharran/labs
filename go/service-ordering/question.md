@@ -13,7 +13,7 @@ This is similar to how tools like Docker Compose, Terraform, Pulumi, and build s
 
 ## Input Format
 
-For the coding interview version, assume the YAML is already parsed into this shape:
+For the coding exercise version, assume the YAML is already parsed into this shape:
 
 ```go
 map[string][]string
@@ -262,7 +262,7 @@ After solving the base problem, try:
 4. Allow missing external dependencies and treat them as already satisfied.
 5. Add startup durations and compute minimum total startup time with unlimited parallelism.
 
-## Clarifying Questions You Can Ask in an Interview
+## Clarifying Questions
 
 1. Should missing dependencies be errors or treated as external services?
 2. If multiple services are ready at the same time, should output order be deterministic?
