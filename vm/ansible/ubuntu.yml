@@ -1,0 +1,136 @@
+---
+- name: Configure personal Ubuntu VM
+  hosts: all
+  become: true
+
+  vars:
+    target_user: msharran
+    clang_version: "14"
+    go_arch:
+      x86_64: amd64
+      aarch64: arm64
+      arm64: arm64
+
+  tasks:
+    - name: Create personal user
+      ansible.builtin.user:
+        name: "{{ target_user }}"
+        shell: /bin/bash
+        groups: sudo
+        append: true
+        create_home: true
+
+    - name: Allow personal user passwordless sudo
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/{{ target_user }}"
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+        content: "{{ target_user }} ALL=(ALL) NOPASSWD:ALL\n"
+
+    - name: Check for Vagrant SSH authorized keys
+      ansible.builtin.stat:
+        path: /home/vagrant/.ssh/authorized_keys
+      register: vagrant_authorized_keys
+
+    - name: Create personal user SSH directory
+      ansible.builtin.file:
+        path: "/home/{{ target_user }}/.ssh"
+        state: directory
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: "0700"
+      when: vagrant_authorized_keys.stat.exists
+
+    - name: Let personal user SSH with the Vagrant key
+      ansible.builtin.copy:
+        src: /home/vagrant/.ssh/authorized_keys
+        dest: "/home/{{ target_user }}/.ssh/authorized_keys"
+        remote_src: true
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: "0600"
+      when: vagrant_authorized_keys.stat.exists
+
+    - name: Install small prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - fzf
+          - nodejs
+          - npm
+          - tar
+          - coreutils
+          - bsdutils
+          - findutils
+          - build-essential
+          - pkgconf
+          - "llvm-{{ clang_version }}"
+          - "clang-{{ clang_version }}"
+          - "clang-format-{{ clang_version }}"
+          - linux-headers-generic
+          - linux-tools-generic
+          - "linux-tools-{{ ansible_kernel }}"
+          - libbpf-dev
+          - libelf-dev
+          - libzstd-dev
+          - zlib1g-dev
+        update_cache: true
+        state: present
+
+    - name: Install Pi harness
+      ansible.builtin.command: npm install -g --ignore-scripts @earendil-works/pi-coding-agent@latest
+
+    - name: Get latest stable Go release
+      ansible.builtin.uri:
+        url: https://go.dev/dl/?mode=json
+        return_content: true
+      register: go_releases
+
+    - name: Set Go download facts
+      ansible.builtin.set_fact:
+        go_version: "{{ go_releases.json[0].version }}"
+        go_tarball: "{{ go_releases.json[0].version }}.linux-{{ go_arch[ansible_facts.architecture] }}.tar.gz"
+
+    - name: Check installed Go
+      ansible.builtin.command: /usr/local/go/bin/go version
+      register: installed_go
+      failed_when: false
+      changed_when: false
+
+    - name: Remove old Go when version changed
+      ansible.builtin.file:
+        path: /usr/local/go
+        state: absent
+      when: go_version not in installed_go.stdout | default('')
+
+    - name: Install latest stable Go
+      ansible.builtin.unarchive:
+        src: "https://go.dev/dl/{{ go_tarball }}"
+        dest: /usr/local
+        remote_src: true
+      when: go_version not in installed_go.stdout | default('')
+
+    - name: Put Go on PATH
+      ansible.builtin.copy:
+        dest: /etc/profile.d/go.sh
+        mode: "0644"
+        content: |
+          export PATH=/usr/local/go/bin:$PATH
+
+    - name: Set Clang as default
+      ansible.builtin.command: "update-alternatives --install /usr/bin/{{ item }} {{ item }} /usr/bin/{{ item }}-{{ clang_version }} 100"
+      loop: [clang, clang-format, llc, llvm-strip]
+
+    - name: Add pickharness to bashrc
+      become: true
+      become_user: "{{ target_user }}"
+      ansible.builtin.blockinfile:
+        path: "/home/{{ target_user }}/.bashrc"
+        marker: "# {mark} ANSIBLE PICKHARNESS"
+        block: |
+          pickharness() {
+            local cmd
+            cmd=$(printf "%s\n" pi "pi -r" | fzf)
+            [ -n "$cmd" ] || return
+            eval "$cmd"
+          }

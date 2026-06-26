@@ -1,0 +1,20 @@
+[project]
+name = "realtime-chat"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Sharran", email = "sharran.murali@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "click>=8.1.8",
+    "websockets>=16.0",
+]
+
+[project.scripts]
+rc-cli = "realtime_chat.cli:root"
+rc-server = "realtime_chat.server:root"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

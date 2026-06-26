@@ -22,6 +22,14 @@ Top-level areas include:
 
 ## Working conventions
 
+### Personal workflow mental model
+
+- The Mac setup is the primary, preferred daily interface and should remain pleasant and familiar.
+- Linux VM setup is optional/on-demand: use it when needed by remotely connecting to the OrbStack VM, commonly through Zed Remote over SSH.
+- Common personal workflows should be exposed as shell functions, not hidden behind complex automation.
+- Implement shell interfaces natively per environment: Fish functions for macOS, Bash functions for Linux VMs.
+- Keep VM automation boring, minimal, declarative, and personally maintainable. Prefer one clear Ansible playbook and simple Make targets over abstractions.
+
 - Treat each experiment as independent. Before editing, identify the nearest project root by looking for files such as `go.mod`, `Cargo.toml`, `build.gradle`, `build.zig`, `Makefile`, or README files.
 - Prefer project-local commands over repository-wide commands.
 - Keep changes narrowly scoped to the requested experiment or directory.
