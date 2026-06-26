@@ -1,13 +1,14 @@
 APP=egress-monitor
 GO=go
+ORB=orb
 
-.PHONY: build run clean
+.PHONY: build clean run-%
 
 build:
-	$(GO) build -o $(APP) .
+	$(ORB) $(GO) build -o $(APP) .
 
-run:
-	$(GO) run .
+run-%: build
+	$(ORB) sudo ./$(APP) $*
 
 clean:
 	rm -f $(APP)
