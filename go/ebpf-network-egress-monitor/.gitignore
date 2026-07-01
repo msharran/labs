@@ -1,1 +1,3 @@
 egress-monitor
+*.tmp
+*.o

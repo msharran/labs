@@ -8,9 +8,16 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"structs"
 
 	"github.com/cilium/ebpf"
 )
+
+type egressRecvArgs struct {
+	_    structs.HostLayout
+	Buf  uint64
+	Size uint64
+}
 
 // loadEgress returns the embedded CollectionSpec for egress.
 func loadEgress() (*ebpf.CollectionSpec, error) {
@@ -54,14 +61,18 @@ type egressSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type egressProgramSpecs struct {
-	HandleEnter *ebpf.ProgramSpec `ebpf:"handle_enter"`
+	HandleEnter         *ebpf.ProgramSpec `ebpf:"handle_enter"`
+	HandleRecvfromEnter *ebpf.ProgramSpec `ebpf:"handle_recvfrom_enter"`
+	HandleRecvfromExit  *ebpf.ProgramSpec `ebpf:"handle_recvfrom_exit"`
+	HandleSendto        *ebpf.ProgramSpec `ebpf:"handle_sendto"`
 }
 
 // egressMapSpecs contains maps before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type egressMapSpecs struct {
-	Events *ebpf.MapSpec `ebpf:"events"`
+	Events       *ebpf.MapSpec `ebpf:"events"`
+	RecvfromArgs *ebpf.MapSpec `ebpf:"recvfrom_args"`
 }
 
 // egressVariableSpecs contains global variables before they are loaded into the kernel.
@@ -90,12 +101,14 @@ func (o *egressObjects) Close() error {
 //
 // It can be passed to loadEgressObjects or ebpf.CollectionSpec.LoadAndAssign.
 type egressMaps struct {
-	Events *ebpf.Map `ebpf:"events"`
+	Events       *ebpf.Map `ebpf:"events"`
+	RecvfromArgs *ebpf.Map `ebpf:"recvfrom_args"`
 }
 
 func (m *egressMaps) Close() error {
 	return _EgressClose(
 		m.Events,
+		m.RecvfromArgs,
 	)
 }
 
@@ -109,12 +122,18 @@ type egressVariables struct {
 //
 // It can be passed to loadEgressObjects or ebpf.CollectionSpec.LoadAndAssign.
 type egressPrograms struct {
-	HandleEnter *ebpf.Program `ebpf:"handle_enter"`
+	HandleEnter         *ebpf.Program `ebpf:"handle_enter"`
+	HandleRecvfromEnter *ebpf.Program `ebpf:"handle_recvfrom_enter"`
+	HandleRecvfromExit  *ebpf.Program `ebpf:"handle_recvfrom_exit"`
+	HandleSendto        *ebpf.Program `ebpf:"handle_sendto"`
 }
 
 func (p *egressPrograms) Close() error {
 	return _EgressClose(
 		p.HandleEnter,
+		p.HandleRecvfromEnter,
+		p.HandleRecvfromExit,
+		p.HandleSendto,
 	)
 }
 
