@@ -17,7 +17,7 @@ We already model AWS-style VPC networking in Terraform (`terraform/floci/modules
 1. Trace outbound and inbound flows end-to-end with `tcpdump` and routing tables.
 2. Implement 1:1 public↔private address translation for instances with assigned public IPs.
 3. Separate **control plane** (attach IGW, install routes, allocate public IPs) from **data plane** (forward/NAT packets).
-4. Produce a topology we can reuse as the attachment point for NAT Gateway in `02-natgw.md`.
+4. Produce a topology we can reuse as the attachment point for NAT Gateway in `specs/natgw/02-natgw.md`.
 
 ---
 
@@ -212,8 +212,10 @@ When `state: detached`:
 
 ```text
 specs/
-  01-igw.md          # this document
-  02-natgw.md        # next milestone
+  igw/
+    01-igw.md        # this document
+  natgw/
+    02-natgw.md      # next milestone
 
 netlab/              # implementation root (name TBD)
   README.md
@@ -253,7 +255,7 @@ netlab/              # implementation root (name TBD)
 | **2 — Control plane** | Declarative mappings + routes | YAML + `apply`, attach/detach |
 | **3 — Hardening** | Operability | idempotent setup, better errors, packet capture helpers |
 
-NAT Gateway (`02-natgw.md`) should **reuse** this topology: private subnets appear, default route targets NAT GW in a public subnet, and public subnet still uses IGW for `0.0.0.0/0`.
+NAT Gateway (`specs/natgw/02-natgw.md`) should **reuse** this topology: private subnets appear, default route targets NAT GW in a public subnet, and public subnet still uses IGW for `0.0.0.0/0`.
 
 ---
 
