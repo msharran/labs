@@ -4,290 +4,194 @@
 > **Series:** `01-igw` → `02-natgw` (planned)  
 > **Last updated:** 2026-08-28
 
-## 1. Why build this?
+## 1. Goal
 
-We already model AWS-style VPC networking in Terraform (`terraform/floci/modules/aws-network`) and diagrams, but those resources are *managed for us*. This lab series builds miniature, observable versions of the same primitives so we can answer questions like:
+Understand **what an Internet Gateway actually does** — not build a VPC.
 
-- What actually happens to a packet when a route table points `0.0.0.0/0` at an Internet Gateway?
-- Where does NAT happen, and who owns the connection state?
-- What is the gateway responsible for vs. what subnets / security policy still own?
+We already use AWS IGWs in Terraform (`terraform/floci/modules/aws-network`), but they are opaque managed resources. This lab isolates the gateway itself: a box at the network edge that forwards traffic between an internal host and the internet, and translates addresses when a host has a public IP.
 
-**Learning outcomes for the IGW milestone:**
+**What we want to be able to explain after this lab:**
 
-1. Trace outbound and inbound flows end-to-end with `tcpdump` and routing tables.
-2. Implement 1:1 public↔private address translation for instances with assigned public IPs.
-3. Separate **control plane** (attach IGW, install routes, allocate public IPs) from **data plane** (forward/NAT packets).
-4. Produce a topology we can reuse as the attachment point for NAT Gateway in `specs/natgw/02-natgw.md`.
+1. Why a host needs a default route pointing at the IGW to reach the internet.
+2. What changes in a packet as it crosses the IGW (source/destination rewrite).
+3. Why return traffic works without extra rules on the host (connection tracking).
+4. What "attach" and "detach" mean in practice (routes on / routes off).
 
----
+**What we are not building:**
 
-## 2. Reference model: AWS Internet Gateway
-
-This spec mirrors AWS behavior where practical, but intentionally simplifies HA, scale, and EC2 integration.
-
-| AWS concept | Behavior we care about |
-|---|---|
-| Attachment | One IGW per VPC; IGW is associated with the VPC edge |
-| Public subnet routing | Route table entry: `0.0.0.0/0 → igw` |
-| Outbound | Instance sends with private source IP; IGW rewrites to assigned public IP |
-| Inbound | Internet sends to public IP; IGW rewrites destination to private IP and delivers inside VPC |
-| Security | IGW does **not** filter — NACLs / security groups (out of scope v1) |
-| Stateful return | Return traffic for established flows must work without extra routing on instances |
-
-**Explicit non-goals for v1 (AWS features we defer):**
-
-- IPv6
-- Horizontal scaling / HA pairs
-- BGP or dynamic routing
-- Integration with real cloud APIs
-- Bandwidth accounting or rate limiting
+- A VPC, subnets, route tables, or control-plane API
+- HA, IPv6, security groups, or cloud integration
 
 ---
 
-## 3. Proposed lab topology
+## 2. What an IGW does (the mental model)
 
-Simulate a small VPC on a single Linux host (VM or bare metal) using **network namespaces** and **veth pairs**. This keeps the lab cheap, scriptable, and easy to reset.
+An Internet Gateway is the **edge router between your internal network and the public internet**.
 
 ```text
-                         [ upstream / lab "internet" ]
-                                    |
-                           +--------+--------+
-                           |  ns: internet   |  203.0.113.0/24 (example)
-                           |  203.0.113.1    |
-                           +--------+--------+
-                                    | veth
-                           +--------+--------+
-                           |  ns: igw        |  ← our Internet Gateway
-                           |  vpc-side: 10.0.0.1/24
-                           |  inet-side: 203.0.113.254/24
-                           +--------+--------+
-                                    | veth (vpc link)
-                           +--------+--------+
-                           |  ns: vpc        |  10.0.0.0/16 (simulated)
-                           |                 |
-                           |  +-----------+  |
-                           |  | ns: pub-a |  |  10.0.1.0/24 public subnet
-                           |  | instance |  |  10.0.1.10 (+ public 203.0.113.10)
-                           |  +-----------+  |
-                           +-----------------+
+   [ host ]          [ IGW ]          [ internet ]
+  10.0.1.10  ←──→  translates  ←──→  203.0.113.10
+  (private)        + forwards        (public)
 ```
 
-### Addressing plan (initial)
+| Direction | IGW action |
+|---|---|
+| **Outbound** | Host sends packet with private source IP → IGW rewrites source to the host's public IP → forwards to internet |
+| **Inbound** | Internet sends to public IP → IGW rewrites destination to private IP → forwards to host |
+| **No public IP** | IGW does not NAT this host; it cannot reach the internet through the gateway |
 
-| Namespace | Role | CIDR / addresses |
+The IGW does **not** filter traffic. It routes and translates. Security policy is someone else's job.
+
+In AWS, you attach an IGW to a VPC and add a route `0.0.0.0/0 → igw` in a route table. **Attach/detach is really about whether that route exists.** Detached = no path to the internet, even if the gateway process still exists.
+
+---
+
+## 3. Minimal lab topology
+
+Three network namespaces on one Linux host. No VPC abstraction — just enough plumbing to see the IGW in action.
+
+```text
+                    [ ns: internet ]
+                    203.0.113.1/24
+                           |
+                      veth pair
+                           |
+                    [ ns: igw ]  ← the thing we're learning
+              inet: 203.0.113.254/24
+              host: 10.0.1.1/24
+                           |
+                      veth pair
+                           |
+                    [ ns: host ]
+                    10.0.1.10/24
+                    public mapping: 203.0.113.10
+```
+
+| Namespace | Role | Address |
 |---|---|---|
-| `internet` | Upstream / simulated internet | `203.0.113.0/24` |
-| `igw` | Internet Gateway data plane | `10.0.0.1/24` (VPC side), `203.0.113.254/24` (internet side) |
-| `vpc` | L2/L3 aggregation (optional hop) | `10.0.0.0/16` |
-| `pub-a` | Public subnet A | `10.0.1.0/24` |
-| `instance-a` | Workload with public IP mapping | private `10.0.1.10`, public `203.0.113.10` |
+| `host` | Internal machine with a public IP allocation | `10.0.1.10`, mapped to `203.0.113.10` |
+| `igw` | Internet Gateway — forwards + 1:1 NAT | `10.0.1.1` (host side), `203.0.113.254` (internet side) |
+| `internet` | Simulated upstream | `203.0.113.1` |
 
-> **Open question:** Do we need a separate `vpc` namespace, or connect `pub-a` directly to `igw` via veth? Direct attachment is simpler; an extra hop better mimics "VPC router" semantics.
+That's it. One host, one gateway, one internet peer.
 
 ---
 
-## 4. Responsibilities
+## 4. The three mechanisms to learn
 
-### 4.1 Data plane (`igw` namespace)
+### 4.1 Routing
 
-The data plane forwards IP traffic between the VPC-facing interface and the internet-facing interface and performs **1:1 static NAT** for instances with allocated public addresses.
-
-| Direction | Action |
-|---|---|
-| Egress (VPC → internet) | If source private IP has a public mapping, SNAT source to public IP; forward to internet |
-| Ingress (internet → VPC) | If destination public IP has a mapping, DNAT to private IP; forward into VPC |
-| No mapping | Drop (or optionally ICMP unreachable — decide in v1) |
-| Non-NAT traffic | Not handled by IGW in this lab (no generic SNAT pool) |
-
-**Implementation sketch (v1):**
-
-- Enable `net.ipv4.ip_forward=1` in `igw` namespace
-- Use `nftables` (preferred) or `iptables` for DNAT/SNAT rules driven by a mapping table
-- Connection tracking (`nf_conntrack`) enabled so return traffic is un-NATed correctly
-
-### 4.2 Control plane (user-space)
-
-A small controller (language TBD) manages **desired state**:
-
-```yaml
-vpc:
-  id: vpc-local
-  cidr: 10.0.0.0/16
-
-internet_gateway:
-  id: igw-1
-  vpc_id: vpc-local
-  state: attached   # attached | detached
-
-public_ip_allocations:
-  - allocation_id: eipalloc-1
-    public_ip: 203.0.113.10
-    private_ip: 10.0.1.10
-    instance: instance-a
-
-route_tables:
-  - id: rtb-public-a
-    associations: [pub-a]
-    routes:
-      - dst: 10.0.0.0/16
-        target: local
-      - dst: 0.0.0.0/0
-        target: igw-1
-```
-
-The controller:
-
-1. Creates namespaces / veth / addresses (or shells out to setup scripts)
-2. Programs routes in workload namespaces (`default via 10.0.0.1` in `pub-a`)
-3. Renders NAT rules in `igw` from `public_ip_allocations`
-4. Supports `attach` / `detach` IGW (add/remove default route in associated route tables)
-
-> **Open question:** YAML file + CLI for v1, or jump straight to a minimal HTTP API?
-
----
-
-## 5. Packet flows
-
-### 5.1 Outbound (instance → internet)
-
-Example: `instance-a` (`10.0.1.10`, public `203.0.113.10`) pings `203.0.113.1`.
+The host needs a default route through the IGW:
 
 ```text
-1. instance-a: src 10.0.1.10 → dst 203.0.113.1
-2. route in pub-a: default via 10.0.0.1 (igw vpc-side)
-3. igw: match SNAT 10.0.1.10 → 203.0.113.10
-4. igw: forward to internet namespace
-5. internet: sees src 203.0.113.10 → dst 203.0.113.1
+host:  0.0.0.0/0 via 10.0.1.1
+igw:   10.0.1.0/24 dev host-side
+       0.0.0.0/0    dev internet-side
 ```
 
-### 5.2 Inbound (internet → instance)
+**Exercise:** ping `203.0.113.1` from `host` with forwarding enabled but **no NAT**. The ping fails (or replies go to the wrong place). Observe why routing alone is not enough.
 
-Example: external host sends to `203.0.113.10:8080`.
+### 4.2 1:1 NAT
+
+The IGW maps one public IP to one private IP:
 
 ```text
-1. internet: dst 203.0.113.10
-2. route to igw internet-side interface
-3. igw: DNAT 203.0.113.10 → 10.0.1.10
-4. igw: forward into pub-a / instance-a
-5. instance-a: receives dst 10.0.1.10
+Outbound:  src 10.0.1.10  →  src 203.0.113.10
+Inbound:   dst 203.0.113.10  →  dst 10.0.1.10
 ```
 
-### 5.3 Detached IGW
+Implemented with `nftables` (or `iptables`) in the `igw` namespace, plus `net.ipv4.ip_forward=1`.
 
-When `state: detached`:
+**Exercise:** add the NAT rule, ping again, `tcpdump` on all three namespaces and compare addresses at each hop.
 
-- Remove `0.0.0.0/0 → igw` routes from associated route tables
-- Instances retain private addresses but lose outbound internet path
-- Inbound public IP traffic is dropped at igw (no route / no mapping applied)
+### 4.3 Connection tracking
+
+Return traffic for an outbound flow must be un-NATed automatically. Linux `nf_conntrack` handles this — the IGW does not need a per-flow rule for replies.
+
+**Exercise:** start a TCP listener on `host:8080`, connect from `internet` to `203.0.113.10:8080`, watch the DNAT on ingress and the reverse on the reply.
 
 ---
 
-## 6. Routing contract
+## 5. Packet walks
 
-### In public subnet namespaces (`pub-a`)
+### Outbound ping: `host` → `203.0.113.1`
 
-| Destination | Next hop / device |
-|---|---|
-| `10.0.0.0/16` | local / connected |
-| `0.0.0.0/0` | `10.0.0.1` (IGW VPC-side) **only when IGW attached** |
+```text
+1. host:      src 10.0.1.10      dst 203.0.113.1
+2. host routes via 10.0.1.1 (igw)
+3. igw SNAT:  src 203.0.113.10   dst 203.0.113.1
+4. internet:  sees public source, replies to 203.0.113.10
+5. igw unsNAT reply back to 10.0.1.10
+```
 
-### In `igw` namespace
+### Inbound TCP: `internet` → `host:8080`
 
-| Destination | Next hop / device |
-|---|---|
-| `10.0.0.0/16` | VPC-facing interface |
-| `0.0.0.0/0` | Internet-facing interface |
-| Mapped public IPs | Resolved via NAT prerouting/postrouting |
+```text
+1. internet:  dst 203.0.113.10:8080
+2. igw DNAT:  dst 10.0.1.10:8080
+3. host:      receives connection on :8080
+```
 
-### In `internet` namespace
+### Detached IGW
 
-| Destination | Next hop / device |
-|---|---|
-| `203.0.113.0/24` | local |
-| `203.0.113.10` (mapped public IPs) | via IGW internet-side address |
+Remove the default route on `host`. The IGW namespace and NAT rules can still exist, but the host has no path to it. **This is what AWS "detach" means at the packet level.**
 
 ---
 
-## 7. Repository layout (proposed)
+## 6. Lab scripts (proposed)
 
 ```text
-specs/
-  igw/
-    01-igw.md        # this document
-  natgw/
-    02-natgw.md      # next milestone
-
-netlab/              # implementation root (name TBD)
-  README.md
-  topology/
-    setup.sh         # create namespaces + veth
-    teardown.sh
-  igw/
-    mappings.yaml    # desired state
-    apply.sh         # render nftables / ip route
-    controller/      # optional Go/Rust daemon (phase 2)
+netlab/igw/
+  README.md           # concepts + tcpdump cheat sheet
+  setup.sh            # create 3 namespaces, veth, addresses, routes
+  nat.sh              # apply/remove the 1:1 NAT rule
+  attach.sh           # add default route on host
+  detach.sh           # remove default route on host
+  teardown.sh         # delete namespaces
   tests/
-    outbound_ping.sh
-    inbound_curl.sh
+    ping_outbound.sh
+    curl_inbound.sh
 ```
 
-> **Open question:** Top-level directory name — `netlab/`, `gateway-lab/`, or under `vm/`?
+No YAML control plane. No route table abstraction. Shell scripts you can read top to bottom.
 
 ---
 
-## 8. Acceptance criteria (v1)
+## 7. Acceptance criteria
 
-- [ ] **Attach/detach:** Toggling IGW attachment adds/removes default route in `pub-a`.
-- [ ] **Outbound NAT:** From `instance-a`, traffic to `internet` appears with source `203.0.113.10`.
-- [ ] **Inbound NAT:** A listener on `instance-a:8080` is reachable at `203.0.113.10:8080` from `internet`.
-- [ ] **No public IP, no internet:** An instance without mapping cannot reach `internet` through the IGW.
-- [ ] **Observability:** Documented `tcpdump` attachment points for each hop in §5.
-- [ ] **Reset:** `teardown.sh` returns host to clean state.
+- [ ] Can draw the three-namespace topology from memory.
+- [ ] Can explain why ping fails without NAT but works with it.
+- [ ] Outbound traffic from `host` appears as `203.0.113.10` in `internet`.
+- [ ] Inbound connection to `203.0.113.10` reaches `host`.
+- [ ] Detaching (removing default route) blocks outbound internet access.
+- [ ] Have `tcpdump` captures for at least one outbound and one inbound flow.
 
 ---
 
-## 9. Implementation phases
+## 8. Implementation phases
 
-| Phase | Goal | Deliverables |
+| Phase | Focus | Done when |
 |---|---|---|
-| **0 — Manual plumbing** | Prove topology and routing | `setup.sh`, ping across namespaces without NAT |
-| **1 — Static 1:1 NAT** | Data plane only | `nftables` rules, hard-coded mapping, acceptance tests |
-| **2 — Control plane** | Declarative mappings + routes | YAML + `apply`, attach/detach |
-| **3 — Hardening** | Operability | idempotent setup, better errors, packet capture helpers |
+| **0 — Plumbing** | Namespaces, veth, routes, forwarding | `host` can reach `igw` interface, not yet internet |
+| **1 — NAT** | Single `nftables` 1:1 rule | Outbound ping to `internet` works |
+| **2 — Inbound** | DNAT for incoming connections | `curl` from `internet` to `host` works |
+| **3 — Attach/detach** | Route toggle scripts | Can demonstrate blocked vs. allowed path |
 
-NAT Gateway (`specs/natgw/02-natgw.md`) should **reuse** this topology: private subnets appear, default route targets NAT GW in a public subnet, and public subnet still uses IGW for `0.0.0.0/0`.
-
----
-
-## 10. Decisions to make together
-
-Please react to these and we'll fold answers back into the spec.
-
-1. **Host environment:** Linux VM only (OrbStack), or also support containerized setup?
-2. **Topology shape:** `pub-a` ↔ `igw` direct veth, or include an explicit `vpc` router namespace?
-3. **Control plane language:** Bash + `nft` first, or Go/Rust from the start?
-4. **State interface:** YAML file, CLI subcommands (`igw attach`, `igw allocate-eip`), or HTTP API?
-5. **Project location:** New top-level `netlab/` vs. extend `vm/` automation?
-6. **Public IP pool:** Single `/24` lab network (`203.0.113.0/24` TEST-NET-3) — OK?
-7. **Drop vs. reject:** For unmapped traffic at IGW, should we drop silently or return ICMP unreachable?
+NAT Gateway (`specs/natgw/02-natgw.md`) comes later and adds a **second** gateway role (SNAT for hosts without public IPs). The IGW lab should be done first so that difference is obvious.
 
 ---
 
-## 11. Glossary
+## 9. Open questions
 
-| Term | Meaning in this lab |
-|---|---|
-| **VPC** | Isolated L3 network built from namespaces |
-| **Public subnet** | Subnet whose route table sends `0.0.0.0/0` to the IGW |
-| **IGW** | Edge gateway performing 1:1 NAT for allocated public IPs |
-| **Public IP allocation** | Binding `{public_ip → private_ip}` managed by control plane |
-| **Upstream / internet** | Simulated external network namespace |
+1. **Host environment:** Linux VM (OrbStack) only?
+2. **Project location:** `netlab/igw/` at repo root?
+3. **nftables vs iptables:** `nft` preferred on modern Linux — OK?
+4. **Address pool:** TEST-NET-3 `203.0.113.0/24` for the simulated internet?
 
 ---
 
-## 12. References
+## 10. References
 
 - [AWS: Internet gateways](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html)
-- Existing repo baseline: `terraform/floci/modules/aws-network/main.tf`
-- Diagram: `terraform/floci/modules/aws-network/examples/diagram/network_architecture.py`
-- Linux: network namespaces, veth, nftables NAT
+- Repo baseline: `terraform/floci/modules/aws-network/main.tf`
+- Linux: `ip netns`, veth pairs, `nftables` NAT, `nf_conntrack`
