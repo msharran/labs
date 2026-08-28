@@ -1,0 +1,5 @@
+{
+  "name": "labs",
+  "install": "./.cursor/install.sh",
+  "ports": [3000, 8765]
+}
